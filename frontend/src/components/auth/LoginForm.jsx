@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LogIn, AlertCircle, KeyRound, User, Sparkles } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 export function LoginForm({ onSuccess, onSwitchToRegister }) {
   const { login, enableDemoMode, backendAvailable } = useAuth();

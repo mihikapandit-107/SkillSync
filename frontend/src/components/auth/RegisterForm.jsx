@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { UserPlus, AlertCircle, User, Mail, School, Lock } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 export function RegisterForm({ onSuccess, onSwitchToLogin }) {
   const { register } = useAuth();

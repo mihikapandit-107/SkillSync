@@ -1,5 +1,5 @@
-import { GraduationCap, Compass, BookOpen, Layers, User, LogOut, LogIn, UserPlus } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { useAuth } from '../../context/useAuth';
 
 export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, onOpenProfile }) {
   const { user, isAuthenticated, logout, enableDemoMode, isDemoMode } = useAuth();

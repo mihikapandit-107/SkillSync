@@ -1,29 +1,24 @@
 import { useState, useEffect } from 'react';
-import { School, User, Calendar, MessageSquare } from 'lucide-react';
+import { School, Calendar } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { authApi } from '../../api/auth';
 
 export function UserProfileModal({ isOpen, onClose, userId, fallbackUser }) {
   const [profile, setProfile] = useState(fallbackUser || null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !userId) return;
 
-    if (fallbackUser && fallbackUser.id === userId) {
-      setProfile(fallbackUser);
-    }
-
     let isMounted = true;
     const fetchUser = async () => {
-      setLoading(true);
       try {
         const data = await authApi.getUserDetail(userId);
         if (isMounted) setProfile(data);
       } catch (err) {
-        console.warn('Could not load public profile via API, using provided data:', err);
-      } finally {
-        if (isMounted) setLoading(false);
+        console.warn('Could not load public profile via API, using fallback data:', err);
+        if (isMounted && fallbackUser) {
+          setProfile(fallbackUser);
+        }
       }
     };
 
@@ -35,9 +30,10 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser }) {
 
   if (!isOpen) return null;
 
-  const displayName = profile?.first_name || profile?.last_name
-    ? `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
-    : (profile?.username || 'Student');
+  const currentProfile = profile || fallbackUser;
+  const displayName = currentProfile?.first_name || currentProfile?.last_name
+    ? `${currentProfile?.first_name || ''} ${currentProfile?.last_name || ''}`.trim()
+    : (currentProfile?.username || 'Student');
 
   return (
     <Modal
@@ -65,12 +61,12 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser }) {
             fontSize: '1.5rem',
             fontWeight: 800,
           }}>
-            {(profile?.first_name?.[0] || profile?.username?.[0] || 'S').toUpperCase()}
+            {(currentProfile?.first_name?.[0] || currentProfile?.username?.[0] || 'S').toUpperCase()}
           </div>
           <div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.2rem' }}>{displayName}</h3>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              @{profile?.username}
+              @{currentProfile?.username}
             </div>
           </div>
         </div>
@@ -86,7 +82,7 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem' }}>
             <School size={16} color="var(--primary)" />
-            <span style={{ fontWeight: 600 }}>{profile?.college || 'University Student'}</span>
+            <span style={{ fontWeight: 600 }}>{currentProfile?.college || 'University Student'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             <Calendar size={16} color="var(--text-muted)" />
@@ -99,13 +95,13 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser }) {
           <p style={{
             fontSize: '0.9rem',
             lineHeight: '1.6',
-            color: profile?.bio ? 'var(--text-main)' : 'var(--text-muted)',
+            color: currentProfile?.bio ? 'var(--text-main)' : 'var(--text-muted)',
             backgroundColor: 'var(--bg-subtle)',
             padding: '0.85rem 1rem',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-subtle)',
           }}>
-            {profile?.bio || 'This student has not added a bio yet.'}
+            {currentProfile?.bio || 'This student has not added a bio yet.'}
           </p>
         </div>
       </div>

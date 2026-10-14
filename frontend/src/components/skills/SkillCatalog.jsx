@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, BookOpen, Layers, Filter, Check, X, Sparkles } from 'lucide-react';
+import { Search, Plus, Layers, X } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
 import { CategoryBadge } from '../common/Badge';
 import { AddSkillModal } from './AddSkillModal';
-import { useAuth } from '../../context/AuthContext';
 
 const INITIAL_FALLBACK_SKILLS = [
   { id: 101, name: 'Python Programming', category: 'Programming' },
@@ -31,7 +30,6 @@ const CATEGORIES = [
 ];
 
 export function SkillCatalog({ onSelectSkillForUser }) {
-  const { isAuthenticated } = useAuth();
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

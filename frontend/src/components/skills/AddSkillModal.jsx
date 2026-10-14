@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlusCircle, AlertCircle, CheckCircle } from 'lucide-react';
+import { PlusCircle, AlertCircle } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { skillsApi } from '../../api/skills';
 import { formatApiError } from '../../api/client';

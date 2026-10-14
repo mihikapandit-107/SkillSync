@@ -1,8 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { AuthContext } from './AuthContextDefinition';
 import { authApi } from '../api/auth';
 import { tokenStorage, formatApiError } from '../api/client';
-
-const AuthContext = createContext(null);
 
 const DEMO_USER = {
   id: 1,
@@ -22,46 +21,57 @@ export function AuthProvider({ children }) {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(true);
 
-  // Initialize and check current authentication state
-  const loadUser = useCallback(async () => {
-    const token = tokenStorage.getAccess();
-    const storedDemo = localStorage.getItem('skillsync_demo_active');
-
-    if (storedDemo === 'true') {
-      setUser(DEMO_USER);
-      setIsDemoMode(true);
-      setLoading(false);
-      return;
-    }
-
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const userData = await authApi.getMe();
-      setUser(userData);
-      setBackendAvailable(true);
-      setError(null);
-    } catch (err) {
-      console.warn('Failed to fetch user profile:', err);
-      if (err.status === 401) {
-        tokenStorage.clearTokens();
-        setUser(null);
-      } else if (err.status === 0) {
-        setBackendAvailable(false);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+    let ignore = false;
+    const init = async () => {
+      const token = tokenStorage.getAccess();
+      const storedDemo = localStorage.getItem('skillsync_demo_active');
+
+      if (storedDemo === 'true') {
+        if (!ignore) {
+          setUser(DEMO_USER);
+          setIsDemoMode(true);
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (!token) {
+        if (!ignore) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const userData = await authApi.getMe();
+        if (!ignore) {
+          setUser(userData);
+          setBackendAvailable(true);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch user profile:', err);
+        if (!ignore) {
+          if (err.status === 401) {
+            tokenStorage.clearTokens();
+            setUser(null);
+          } else if (err.status === 0) {
+            setBackendAvailable(false);
+          }
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const login = async (username, password) => {
     setError(null);
@@ -76,7 +86,6 @@ export function AuthProvider({ children }) {
     } catch (err) {
       const formatted = formatApiError(err);
       setError(formatted);
-      // If backend is not running, offer demo option
       if (err.status === 0) {
         setBackendAvailable(false);
       }
@@ -88,7 +97,6 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       await authApi.register(userData);
-      // Auto login after successful registration
       return await login(userData.username, userData.password);
     } catch (err) {
       const formatted = formatApiError(err);
@@ -133,6 +141,15 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const profile = await authApi.getMe();
+      setUser(profile);
+    } catch (err) {
+      console.warn('Refresh user error:', err);
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -145,17 +162,9 @@ export function AuthProvider({ children }) {
     logout,
     enableDemoMode,
     updateProfile,
-    refreshUser: loadUser,
+    refreshUser,
     clearError: () => setError(null),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

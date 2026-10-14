@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, BookOpen, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Edit2, Trash2, BookOpen, CheckCircle, AlertCircle } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
 import { LevelBadge, SkillTypeBadge } from '../common/Badge';
 import { AddUserSkillModal } from './AddUserSkillModal';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { formatApiError } from '../../api/client';
 
 const DEMO_MY_SKILLS = [
@@ -36,7 +36,7 @@ const DEMO_MY_SKILLS = [
   },
 ];
 
-export function MySkillsView({ onOpenCatalog }) {
+export function MySkillsView() {
   const { isAuthenticated, isDemoMode } = useAuth();
   const [activeTab, setActiveTab] = useState('offer'); // 'offer' | 'want'
   const [userSkills, setUserSkills] = useState([]);
@@ -45,31 +45,37 @@ export function MySkillsView({ onOpenCatalog }) {
   const [editingSkill, setEditingSkill] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
 
-  const fetchMySkills = useCallback(async () => {
-    if (!isAuthenticated) return;
-    setLoading(true);
-
-    if (isDemoMode) {
-      setUserSkills(DEMO_MY_SKILLS);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const data = await skillsApi.getMySkills();
-      const results = Array.isArray(data) ? data : (data?.results || []);
-      setUserSkills(results);
-    } catch (err) {
-      console.warn('Could not fetch user skills via API, using sample data:', err);
-      setUserSkills(DEMO_MY_SKILLS);
-    } finally {
-      setLoading(false);
-    }
-  }, [isAuthenticated, isDemoMode]);
-
   useEffect(() => {
-    fetchMySkills();
-  }, [fetchMySkills]);
+    let isMounted = true;
+    const load = async () => {
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
+      if (isDemoMode) {
+        if (isMounted) {
+          setUserSkills(DEMO_MY_SKILLS);
+          setLoading(false);
+        }
+        return;
+      }
+      try {
+        const data = await skillsApi.getMySkills();
+        const results = Array.isArray(data) ? data : (data?.results || []);
+        if (isMounted) setUserSkills(results);
+      } catch (err) {
+        console.warn('Could not fetch user skills via API, using sample data:', err);
+        if (isMounted) setUserSkills(DEMO_MY_SKILLS);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, isDemoMode]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to remove this skill from your profile?')) {
@@ -97,7 +103,6 @@ export function MySkillsView({ onOpenCatalog }) {
       );
       setFeedbackMessage({ type: 'success', text: 'Skill updated successfully.' });
     }
-    fetchMySkills();
   };
 
   const offeredSkills = userSkills.filter((s) => s.skill_type === 'offer');

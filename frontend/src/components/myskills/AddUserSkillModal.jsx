@@ -14,7 +14,7 @@ export function AddUserSkillModal({
 }) {
   const [catalogSkills, setCatalogSkills] = useState([]);
   const [selectedSkillId, setSelectedSkillId] = useState('');
-  const [skillType, setSkillType] = useState(initialType);
+  const [skillType, setSkillType] = useState('offer');
   const [level, setLevel] = useState('intermediate');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -23,36 +23,43 @@ export function AddUserSkillModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    // Load catalog skills for dropdown
+    let isMounted = true;
     const loadCatalog = async () => {
       try {
         const data = await skillsApi.getCatalogSkills();
         const results = Array.isArray(data) ? data : (data?.results || []);
-        setCatalogSkills(results);
+        if (isMounted) setCatalogSkills(results);
       } catch (err) {
         console.warn('Could not load catalog skills:', err);
       }
     };
     loadCatalog();
 
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  // Handle form reset when opening
+  const isEditing = !!editingUserSkill;
+
+  const handleOpenInit = () => {
     if (editingUserSkill) {
-      setSelectedSkillId(editingUserSkill.skill);
-      setSkillType(editingUserSkill.skill_type);
-      setLevel(editingUserSkill.level || 'intermediate');
-      setDescription(editingUserSkill.description || '');
+      if (selectedSkillId !== editingUserSkill.skill) {
+        setSelectedSkillId(editingUserSkill.skill);
+        setSkillType(editingUserSkill.skill_type);
+        setLevel(editingUserSkill.level || 'intermediate');
+        setDescription(editingUserSkill.description || '');
+      }
     } else if (initialSkill) {
-      setSelectedSkillId(initialSkill.id);
-      setSkillType(initialType);
-      setLevel(initialType === 'offer' ? 'intermediate' : 'beginner');
-      setDescription('');
-    } else {
-      setSelectedSkillId('');
-      setSkillType(initialType);
-      setLevel(initialType === 'offer' ? 'intermediate' : 'beginner');
-      setDescription('');
+      if (selectedSkillId !== initialSkill.id) {
+        setSelectedSkillId(initialSkill.id);
+        setSkillType(initialType);
+        setLevel(initialType === 'offer' ? 'intermediate' : 'beginner');
+        setDescription('');
+      }
     }
-    setError(null);
-  }, [isOpen, initialSkill, initialType, editingUserSkill]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,7 +95,7 @@ export function AddUserSkillModal({
     }
   };
 
-  const isEditing = !!editingUserSkill;
+  if (!isOpen) return null;
 
   return (
     <Modal
@@ -112,7 +119,7 @@ export function AddUserSkillModal({
         </>
       }
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} onFocus={handleOpenInit}>
         {error && (
           <div className="alert alert-danger" role="alert">
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -158,7 +165,7 @@ export function AddUserSkillModal({
             <select
               id="user-skill-select"
               className="form-select"
-              value={selectedSkillId}
+              value={selectedSkillId || initialSkill?.id || ''}
               onChange={(e) => setSelectedSkillId(e.target.value)}
               required
             >

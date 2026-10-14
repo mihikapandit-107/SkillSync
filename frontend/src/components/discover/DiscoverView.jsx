@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Compass, Filter, School, User, ArrowRight, MessageSquare, Check, X, Sparkles } from 'lucide-react';
+import { Search, Compass, School, User, MessageSquare, Check, X } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
-import { LevelBadge, CategoryBadge, SkillTypeBadge } from '../common/Badge';
+import { LevelBadge, CategoryBadge } from '../common/Badge';
 import { UserProfileModal } from '../auth/UserProfileModal';
 import { Modal } from '../common/Modal';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 const DEMO_DISCOVERY_PEERS = [
   {
@@ -110,7 +110,7 @@ const CATEGORIES = [
 ];
 
 export function DiscoverView() {
-  const { user, isAuthenticated, isDemoMode } = useAuth();
+  const { isDemoMode } = useAuth();
   const [skillType, setSkillType] = useState('offer'); // 'offer' | 'want'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');

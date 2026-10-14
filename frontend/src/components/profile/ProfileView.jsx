@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { User, School, Mail, Calendar, Edit3, Save, X, CheckCircle, AlertCircle } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { User, School, Mail, Edit3, Save, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/useAuth';
 
 export function ProfileView({ offeredCount = 0, wantedCount = 0 }) {
   const { user, updateProfile } = useAuth();

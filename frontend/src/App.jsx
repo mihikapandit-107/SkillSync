@@ -1,122 +1,121 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
+import { Navbar } from './components/common/Navbar';
+import { Footer } from './components/common/Footer';
+import { Modal } from './components/common/Modal';
+import { LoginForm } from './components/auth/LoginForm';
+import { RegisterForm } from './components/auth/RegisterForm';
+import { DiscoverView } from './components/discover/DiscoverView';
+import { SkillCatalog } from './components/skills/SkillCatalog';
+import { MySkillsView } from './components/myskills/MySkillsView';
+import { ProfileView } from './components/profile/ProfileView';
+import { AddUserSkillModal } from './components/myskills/AddUserSkillModal';
 
-function App() {
-  const [count, setCount] = useState(0)
+function MainLayout() {
+  const { isAuthenticated } = useAuth();
+  const [activeTab, setActiveTab] = useState('discover'); // 'discover' | 'catalog' | 'myskills' | 'profile'
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+
+  // Quick bridge from Catalog to AddUserSkill
+  const [selectedCatalogSkill, setSelectedCatalogSkill] = useState(null);
+  const [selectedSkillType, setSelectedSkillType] = useState('offer');
+  const [isAddUserSkillOpen, setIsAddUserSkillOpen] = useState(false);
+
+  const handleSelectSkillForUser = (skill, type) => {
+    if (!isAuthenticated) {
+      setIsLoginOpen(true);
+      return;
+    }
+    setSelectedCatalogSkill(skill);
+    setSelectedSkillType(type);
+    setIsAddUserSkillOpen(true);
+  };
+
+  const handleUserSkillAdded = () => {
+    setActiveTab('myskills');
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenLogin={() => setIsLoginOpen(true)}
+        onOpenRegister={() => setIsRegisterOpen(true)}
+        onOpenProfile={() => setActiveTab('profile')}
+      />
 
-      <div className="ticks"></div>
+      <main style={{ flex: 1, padding: '2rem 0' }}>
+        <div className="container">
+          {activeTab === 'discover' && <DiscoverView />}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {activeTab === 'catalog' && (
+            <SkillCatalog onSelectSkillForUser={handleSelectSkillForUser} />
+          )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          {activeTab === 'myskills' && (
+            <MySkillsView onOpenCatalog={() => setActiveTab('catalog')} />
+          )}
+
+          {activeTab === 'profile' && <ProfileView />}
+        </div>
+      </main>
+
+      <Footer />
+
+      {/* Login Modal */}
+      <Modal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        title="Student Sign In"
+        maxWidth="440px"
+      >
+        <LoginForm
+          onSuccess={() => setIsLoginOpen(false)}
+          onSwitchToRegister={() => {
+            setIsLoginOpen(false);
+            setIsRegisterOpen(true);
+          }}
+        />
+      </Modal>
+
+      {/* Register Modal */}
+      <Modal
+        isOpen={isRegisterOpen}
+        onClose={() => setIsRegisterOpen(false)}
+        title="Create Student Profile"
+        maxWidth="480px"
+      >
+        <RegisterForm
+          onSuccess={() => setIsRegisterOpen(false)}
+          onSwitchToLogin={() => {
+            setIsRegisterOpen(false);
+            setIsLoginOpen(true);
+          }}
+        />
+      </Modal>
+
+      {/* Add Skill to My Profile from Catalog */}
+      <AddUserSkillModal
+        isOpen={isAddUserSkillOpen}
+        onClose={() => {
+          setIsAddUserSkillOpen(false);
+          setSelectedCatalogSkill(null);
+        }}
+        onSuccess={handleUserSkillAdded}
+        initialSkill={selectedCatalogSkill}
+        initialType={selectedSkillType}
+      />
+    </div>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainLayout />
+    </AuthProvider>
+  );
+}
