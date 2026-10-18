@@ -1,0 +1,506 @@
+/* ==========================================================================
+   SkillSync Admin Design System - Matches SkillSync Frontend Theme
+   Typography: Outfit (Display) + Plus Jakarta Sans (Body)
+   Colors: Solid Academic Light Theme (#2563eb primary, #f8fafc bg, #ffffff surface)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus Jakarta Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* SkillSync Palette */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-subtle: #eff6ff;
+  --primary-text: #1e40af;
+
+  --accent-indigo: #4f46e5;
+  --accent-indigo-subtle: #eef2ff;
+  --accent-pink: #db2777;
+  --accent-pink-subtle: #fdf2f8;
+  --success: #059669;
+  --success-subtle: #ecfdf5;
+  --warning: #d97706;
+  --warning-subtle: #fffbeb;
+  --danger: #dc2626;
+  --danger-subtle: #fef2f2;
+
+  --bg-page: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --border-focus: #3b82f6;
+
+  --text-main: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+
+  /* Override Django Admin Variables (Light Mode) */
+  --header-bg: #ffffff;
+  --header-color: #0f172a;
+  --header-link-color: #2563eb;
+  --body-bg: #f8fafc;
+  --body-fg: #0f172a;
+  --body-quiet-color: #64748b;
+  --body-loud-color: #0f172a;
+  --breadcrumbs-bg: #ffffff;
+  --breadcrumbs-link-fg: #2563eb;
+  --breadcrumbs-fg: #64748b;
+  --link-fg: #2563eb;
+  --link-hover-color: #1d4ed8;
+  --link-selected-fg: #1d4ed8;
+  --hairline-color: #e2e8f0;
+  --border-color: #e2e8f0;
+  --darkened-bg: #f1f5f9;
+  --selected-bg: #eff6ff;
+  --selected-row: #eff6ff;
+  --button-bg: #2563eb;
+  --button-hover-bg: #1d4ed8;
+  --button-fg: #ffffff;
+  --default-button-bg: #2563eb;
+  --default-button-hover-bg: #1d4ed8;
+  --default-button-fg: #ffffff;
+}
+
+/* Force clean light theme styling */
+body {
+  font-family: var(--font-body) !important;
+  background-color: var(--bg-page) !important;
+  color: var(--text-main) !important;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, .module h2, caption {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* -------------------------------------------------------------------------
+   Header / Navigation Bar
+   ------------------------------------------------------------------------- */
+#header {
+  background: #ffffff !important;
+  color: var(--text-main) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  padding: 0.75rem 2rem !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+#branding {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.85rem !important;
+}
+
+.brand-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background-color: var(--primary);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-family: var(--font-display) !important;
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.1 !important;
+  text-decoration: none !important;
+}
+
+.brand-subtitle {
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  margin-top: 2px !important;
+}
+
+#user-tools {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  font-size: 0.85rem !important;
+  color: var(--text-secondary) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  float: none !important;
+}
+
+#user-tools a, #user-tools button {
+  background: var(--bg-surface) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  padding: 0.35rem 0.75rem !important;
+  border-radius: var(--radius-sm) !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  text-decoration: none !important;
+  transition: all 150ms ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+#user-tools a:hover, #user-tools button:hover {
+  background: var(--bg-subtle) !important;
+  color: var(--primary) !important;
+  border-color: var(--border-strong) !important;
+}
+
+#user-tools form {
+  margin: 0 !important;
+}
+
+/* -------------------------------------------------------------------------
+   Breadcrumbs
+   ------------------------------------------------------------------------- */
+div.breadcrumbs {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-muted) !important;
+  padding: 0.65rem 2rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+}
+
+div.breadcrumbs a {
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+div.breadcrumbs a:hover {
+  color: var(--primary-hover) !important;
+  text-decoration: underline !important;
+}
+
+/* -------------------------------------------------------------------------
+   Main Content Layout
+   ------------------------------------------------------------------------- */
+#container {
+  min-height: 100vh !important;
+  background-color: var(--bg-page) !important;
+}
+
+#content {
+  padding: 2rem !important;
+  max-width: 1280px !important;
+  margin: 0 auto !important;
+}
+
+/* Hide default dark-mode toggle since theme is clean light */
+.theme-toggle {
+  display: none !important;
+}
+
+/* -------------------------------------------------------------------------
+   Admin Dashboard Analytics Cards Widget
+   ------------------------------------------------------------------------- */
+.skillsync-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.skillsync-stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.skillsync-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.skillsync-stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.skillsync-stat-value {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.skillsync-stat-meta {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--success);
+  margin-top: 0.35rem;
+}
+
+/* -------------------------------------------------------------------------
+   Module Cards & Tables
+   ------------------------------------------------------------------------- */
+.module {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  margin-bottom: 1.5rem !important;
+  overflow: hidden !important;
+}
+
+.module h2, .module caption {
+  background: #ffffff !important;
+  color: var(--text-main) !important;
+  padding: 0.85rem 1.25rem !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+
+#content-main table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 0.9rem !important;
+}
+
+#content-main th {
+  background-color: var(--bg-subtle) !important;
+  color: var(--text-secondary) !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  padding: 0.75rem 1rem !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+#content-main td {
+  padding: 0.85rem 1rem !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-main) !important;
+}
+
+#content-main tr:hover td {
+  background-color: var(--primary-subtle) !important;
+}
+
+#content-main tr.selected td {
+  background-color: #dbeafe !important;
+}
+
+/* -------------------------------------------------------------------------
+   Buttons & Inputs
+   ------------------------------------------------------------------------- */
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.55rem 1.15rem !important;
+  cursor: pointer !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: all 150ms ease !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover {
+  background: var(--primary-hover) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.button.default, input[type=submit].default {
+  background: var(--primary) !important;
+}
+
+input[type=text], input[type=password], input[type=email], input[type=url],
+input[type=number], input[type=tel], select, textarea {
+  font-family: var(--font-body) !important;
+  font-size: 0.9rem !important;
+  color: var(--text-main) !important;
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 0.55rem 0.85rem !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+}
+
+input[type=text]:focus, input[type=password]:focus, input[type=email]:focus,
+select:focus, textarea:focus {
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* -------------------------------------------------------------------------
+   Login Page Specifically (Matches Student Sign In Modal/Card)
+   ------------------------------------------------------------------------- */
+body.login {
+  background: var(--bg-page) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh !important;
+}
+
+body.login #container {
+  width: 100% !important;
+  max-width: 440px !important;
+  min-height: auto !important;
+  margin: 2rem auto !important;
+  background: transparent !important;
+}
+
+body.login #header {
+  display: none !important;
+}
+
+body.login #content {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: 2.25rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+body.login .login-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+body.login .login-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background-color: var(--primary);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+body.login .login-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.25rem;
+}
+
+body.login .login-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+body.login .form-row {
+  display: flex !important;
+  flex-direction: column !important;
+  margin-bottom: 1.15rem !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+body.login .form-row label {
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  color: var(--text-main) !important;
+  margin-bottom: 0.35rem !important;
+  text-align: left !important;
+  float: none !important;
+  width: auto !important;
+}
+
+body.login .form-row input {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0.65rem 0.85rem !important;
+}
+
+body.login .submit-row {
+  margin-top: 1.5rem !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  text-align: center !important;
+}
+
+body.login .submit-row input[type=submit] {
+  width: 100% !important;
+  padding: 0.75rem !important;
+  font-size: 0.95rem !important;
+  border-radius: var(--radius-md) !important;
+}
+
+body.login .errornote {
+  background-color: var(--danger-subtle) !important;
+  color: var(--danger) !important;
+  border: 1px solid #fecaca !important;
+  border-radius: var(--radius-md) !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 1.25rem !important;
+}
+
+/* -------------------------------------------------------------------------
+   Sidebar in Admin
+   ------------------------------------------------------------------------- */
+#nav-sidebar {
+  background-color: #ffffff !important;
+  border-right: 1px solid var(--border-subtle) !important;
+}
+
+.toggle-nav-sidebar {
+  background-color: #ffffff !important;
+  border-right: 1px solid var(--border-subtle) !important;
+}

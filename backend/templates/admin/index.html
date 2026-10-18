@@ -1,0 +1,39 @@
+{% extends "admin/index.html" %}
+{% load i18n admin_dashboard_tags %}
+
+{% block content %}
+<div id="content-main">
+  {% get_analytics_overview as stats %}
+  {% if stats %}
+  <div class="skillsync-analytics-grid">
+    <div class="skillsync-stat-card">
+      <span class="skillsync-stat-label">Total Students</span>
+      <span class="skillsync-stat-value">{{ stats.total_users|default:0 }}</span>
+      <span class="skillsync-stat-meta">+{{ stats.new_users_last_7_days|default:0 }} in last 7 days</span>
+    </div>
+    <div class="skillsync-stat-card">
+      <span class="skillsync-stat-label">Active Accounts</span>
+      <span class="skillsync-stat-value">{{ stats.active_users|default:0 }}</span>
+      <span class="skillsync-stat-meta" style="color: var(--primary);">Campus active</span>
+    </div>
+    <div class="skillsync-stat-card">
+      <span class="skillsync-stat-label">Catalog Skills</span>
+      <span class="skillsync-stat-value">{{ stats.total_skills|default:0 }}</span>
+      <span class="skillsync-stat-meta" style="color: var(--text-muted);">Available subjects</span>
+    </div>
+    <div class="skillsync-stat-card">
+      <span class="skillsync-stat-label">Skills Offered</span>
+      <span class="skillsync-stat-value" style="color: var(--accent-indigo);">{{ stats.total_offers|default:0 }}</span>
+      <span class="skillsync-stat-meta" style="color: var(--accent-indigo);">Can teach</span>
+    </div>
+    <div class="skillsync-stat-card">
+      <span class="skillsync-stat-label">Skills Wanted</span>
+      <span class="skillsync-stat-value" style="color: var(--accent-pink);">{{ stats.total_wants|default:0 }}</span>
+      <span class="skillsync-stat-meta" style="color: var(--accent-pink);">Wants to learn</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {{ block.super }}
+</div>
+{% endblock %}
