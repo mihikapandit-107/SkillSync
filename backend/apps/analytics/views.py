@@ -1,9 +1,15 @@
-from rest_framework import permissions
-from rest_framework.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+from rest_framework import filters, generics, permissions
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.skills.models import Skill
+
 from . import services
+from .serializers import AdminUserSerializer, AdminUserStatusSerializer
+
+User = get_user_model()
 
 MAX_LIMIT = 100
 MAX_WEEKS = 52
@@ -79,3 +85,78 @@ class SkillGapView(AdminAPIView):
     def get(self, request):
         limit = positive_int_param(request, "limit", 10, MAX_LIMIT)
         return Response({"results": services.skill_demand_gap(limit=limit)})
+
+
+# --------------------------------------------------------------------------- moderation
+
+class AdminUserListView(generics.ListAPIView):
+    """
+    GET /api/admin/users/ - all users, newest first (paginated).
+    Query params: ?search=<username/email/name/college>, ?is_active=true|false
+    """
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = AdminUserSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["username", "email", "first_name", "last_name", "college"]
+
+    def get_queryset(self):
+        qs = User.objects.order_by("-date_joined", "-id")
+        is_active = self.request.query_params.get("is_active")
+        if is_active is not None:
+            value = is_active.strip().lower()
+            if value not in ("true", "false"):
+                raise ValidationError({"is_active": ["Must be true or false."]})
+            qs = qs.filter(is_active=(value == "true"))
+        return qs
+
+
+class AdminUserUpdateView(generics.UpdateAPIView):
+    """
+    PATCH /api/admin/users/<id>/ with {"is_active": bool}.
+    Admins cannot deactivate their own account or any superuser.
+    """
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = AdminUserStatusSerializer
+    queryset = User.objects.all()
+    http_method_names = ["patch", "options"]
+
+    def perform_update(self, serializer):
+        target = serializer.instance
+        if serializer.validated_data["is_active"] is False:
+            if target.pk == self.request.user.pk:
+                raise PermissionDenied("You cannot deactivate your own account.")
+            if target.is_superuser:
+                raise PermissionDenied("Superuser accounts cannot be deactivated.")
+        serializer.save()
+
+    def update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        super().update(request, *args, **kwargs)
+        return Response(AdminUserSerializer(self.get_object()).data)
+
+
+class AdminSkillDeleteView(generics.DestroyAPIView):
+    """
+    DELETE /api/admin/skills/<id>/ - remove an inappropriate catalog skill.
+    WARNING: this cascades and also deletes every UserSkill (offer/want) row
+    that references the skill.
+    """
+    permission_classes = [permissions.IsAdminUser]
+    queryset = Skill.objects.all()
+
+
+class AdminReviewDeleteView(APIView):
+    """
+    DELETE /api/admin/reviews/<id>/ - remove an abusive review.
+    Guarded: returns 404 while the reviews app has no Review model.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def delete(self, request, pk):
+        Review = services.get_optional_model("reviews", "Review")
+        if Review is None:
+            raise NotFound("Reviews are not available yet.")
+        deleted, _ = Review.objects.filter(pk=pk).delete()
+        if not deleted:
+            raise NotFound("Review not found.")
+        return Response(status=204)
