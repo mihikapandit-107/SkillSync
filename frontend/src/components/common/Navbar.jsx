@@ -1,4 +1,4 @@
-import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus, Shield } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
 export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, onOpenProfile }) {
@@ -90,6 +90,18 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
             >
               <BookOpen size={16} />
               My Skills
+            </button>
+          )}
+
+          {isAuthenticated && (user?.is_staff || user?.is_superuser) && (
+            <button
+              type="button"
+              className={`btn ${activeTab === 'admin' ? 'btn-primary' : 'btn-outline'}`}
+              style={{ padding: '0.5rem 0.95rem' }}
+              onClick={() => setActiveTab('admin')}
+            >
+              <Shield size={16} />
+              Admin
             </button>
           )}
         </nav>

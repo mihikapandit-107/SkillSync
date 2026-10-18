@@ -11,6 +11,7 @@ import { SkillCatalog } from './components/skills/SkillCatalog';
 import { MySkillsView } from './components/myskills/MySkillsView';
 import { ProfileView } from './components/profile/ProfileView';
 import { AddUserSkillModal } from './components/myskills/AddUserSkillModal';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 
 function MainLayout() {
   const { isAuthenticated } = useAuth();
@@ -60,6 +61,7 @@ function MainLayout() {
           )}
 
           {activeTab === 'profile' && <ProfileView />}
+          {activeTab === 'admin' && <AdminDashboard />}
         </div>
       </main>
 
