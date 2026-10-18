@@ -212,10 +212,23 @@ div.breadcrumbs a:hover {
   background-color: var(--bg-page) !important;
 }
 
+.main {
+  display: flex !important;
+  flex: 1 0 auto !important;
+}
+
 #content {
-  padding: 2rem !important;
-  max-width: 1280px !important;
-  margin: 0 auto !important;
+  padding: 2rem 2.5rem !important;
+  max-width: none !important;
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex: 1 !important;
+}
+
+#content-main {
+  max-width: 1380px !important;
+  width: 100% !important;
 }
 
 /* Hide default dark-mode toggle since theme is clean light */
@@ -386,17 +399,33 @@ body.login {
   align-items: center !important;
   justify-content: center !important;
   min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 1.5rem !important;
+  box-sizing: border-box !important;
 }
 
 body.login #container {
   width: 100% !important;
   max-width: 440px !important;
   min-height: auto !important;
-  margin: 2rem auto !important;
+  margin: 0 auto !important;
   background: transparent !important;
+  display: block !important;
+  box-shadow: none !important;
 }
 
-body.login #header {
+body.login .main,
+body.login .main.shifted {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.login #header,
+body.login #nav-sidebar,
+body.login .toggle-nav-sidebar,
+body.login div.breadcrumbs,
+body.login .skip-to-content-link {
   display: none !important;
 }
 
@@ -407,6 +436,8 @@ body.login #content {
   box-shadow: var(--shadow-lg) !important;
   padding: 2.25rem !important;
   width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
   box-sizing: border-box !important;
 }
 
