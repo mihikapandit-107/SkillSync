@@ -87,7 +87,7 @@ export function SkillCatalog({ onSelectSkillForUser }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '4rem' }}>
       {/* Header Banner */}
       <div className="card" style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div>
@@ -213,17 +213,17 @@ export function SkillCatalog({ onSelectSkillForUser }) {
                   <CategoryBadge category={skill.category} />
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
+                <div style={{ display: 'flex', gap: '0.6rem', borderTop: '1px solid rgba(204, 169, 105, 0.2)', paddingTop: '0.85rem' }}>
                   <button
                     type="button"
-                    className="btn btn-outline btn-sm w-full"
+                    className="btn btn-sm w-full btn-teach"
                     onClick={() => onSelectSkillForUser?.(skill, 'offer')}
                   >
                     Teach This
                   </button>
                   <button
                     type="button"
-                    className="btn btn-outline btn-sm w-full"
+                    className="btn btn-sm w-full btn-learn"
                     onClick={() => onSelectSkillForUser?.(skill, 'want')}
                   >
                     Learn This

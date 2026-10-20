@@ -3,8 +3,8 @@ import { GraduationCap, ShieldCheck, RefreshCw, Users } from 'lucide-react';
 export function Footer() {
   return (
     <footer style={{
-      backgroundColor: 'var(--bg-surface)',
-      borderTop: '1px solid var(--border-subtle)',
+      backgroundColor: '#131b26',
+      borderTop: '1px solid rgba(204, 169, 105, 0.25)',
       padding: '3rem 0 2rem 0',
       marginTop: 'auto',
     }}>
@@ -16,24 +16,25 @@ export function Footer() {
           marginBottom: '2.5rem',
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
               <div style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--primary)',
-                color: '#ffffff',
+                width: '32px',
+                height: '32px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: 'rgba(204, 169, 105, 0.15)',
+                border: '1px solid rgba(204, 169, 105, 0.5)',
+                color: 'var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
                 <GraduationCap size={18} />
               </div>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem' }}>
+              <span style={{ fontFamily: 'var(--font-brand)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--primary)' }}>
                 SkillSync
               </span>
             </div>
-            <p style={{ fontSize: '0.875rem', lineHeight: '1.6' }}>
+            <p style={{ fontSize: '0.875rem', lineHeight: '1.6', color: '#9eb1c5' }}>
               Campus-wide skill exchange and peer learning platform. Students share knowledge, mentor peers, and learn together without monetary exchange.
             </p>
           </div>

@@ -6,8 +6,9 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
 
   return (
     <header style={{
-      backgroundColor: 'var(--bg-surface)',
-      borderBottom: '1px solid var(--border-subtle)',
+      backgroundColor: 'rgba(20, 28, 40, 0.88)',
+      backdropFilter: 'blur(12px)',
+      borderBottom: '1px solid rgba(204, 169, 105, 0.25)',
       position: 'sticky',
       top: 0,
       zIndex: 100,
@@ -16,7 +17,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: '68px',
+        height: '70px',
       }}>
         {/* Brand */}
         <div
@@ -24,35 +25,40 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
           onClick={() => setActiveTab('discover')}
         >
           <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--primary)',
-            color: '#ffffff',
+            width: '38px',
+            height: '38px',
+            borderRadius: 'var(--radius-full)',
+            backgroundColor: 'rgba(204, 169, 105, 0.14)',
+            border: '1px solid rgba(204, 169, 105, 0.5)',
+            color: 'var(--primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            boxShadow: '0 0 10px rgba(204, 169, 105, 0.2)',
           }}>
             <GraduationCap size={22} />
           </div>
           <div>
             <span style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: 'var(--text-main)',
-              letterSpacing: '-0.02em',
+              fontFamily: 'var(--font-brand)',
+              fontSize: '1.4rem',
+              fontWeight: 700,
+              color: 'var(--primary)',
+              letterSpacing: '0.02em',
+              display: 'block',
+              lineHeight: 1.1,
             }}>
               SkillSync
             </span>
             <span style={{
               display: 'block',
-              fontSize: '0.7rem',
+              fontSize: '0.65rem',
               fontWeight: 600,
-              color: 'var(--text-muted)',
+              color: '#a3906a',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.08em',
               lineHeight: 1,
+              marginTop: '2px',
             }}>
               Campus Exchange
             </span>
@@ -60,35 +66,53 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
         </div>
 
         {/* Navigation Tabs */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <button
             type="button"
-            className={`btn ${activeTab === 'discover' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '0.5rem 0.95rem' }}
+            className="btn"
+            style={{
+              padding: '0.45rem 1.15rem',
+              backgroundColor: activeTab === 'discover' ? '#1c2838' : 'transparent',
+              color: activeTab === 'discover' ? '#f5edd8' : '#9eb1c5',
+              border: activeTab === 'discover' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
+              boxShadow: activeTab === 'discover' ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
+            }}
             onClick={() => setActiveTab('discover')}
           >
-            <Compass size={16} />
+            <Compass size={15} color={activeTab === 'discover' ? '#cca969' : '#9eb1c5'} />
             Discover Peers
           </button>
 
           <button
             type="button"
-            className={`btn ${activeTab === 'catalog' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '0.5rem 0.95rem' }}
+            className="btn"
+            style={{
+              padding: '0.45rem 1.15rem',
+              backgroundColor: activeTab === 'catalog' ? '#1c2838' : 'transparent',
+              color: activeTab === 'catalog' ? '#f5edd8' : '#9eb1c5',
+              border: activeTab === 'catalog' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
+              boxShadow: activeTab === 'catalog' ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
+            }}
             onClick={() => setActiveTab('catalog')}
           >
-            <Layers size={16} />
+            <Layers size={15} color={activeTab === 'catalog' ? '#cca969' : '#9eb1c5'} />
             Skill Catalog
           </button>
 
           {isAuthenticated && (
             <button
               type="button"
-              className={`btn ${activeTab === 'myskills' ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: '0.5rem 0.95rem' }}
+              className="btn"
+              style={{
+                padding: '0.45rem 1.15rem',
+                backgroundColor: activeTab === 'myskills' ? '#1c2838' : 'transparent',
+                color: activeTab === 'myskills' ? '#f5edd8' : '#9eb1c5',
+                border: activeTab === 'myskills' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
+                boxShadow: activeTab === 'myskills' ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
+              }}
               onClick={() => setActiveTab('myskills')}
             >
-              <BookOpen size={16} />
+              <BookOpen size={15} color={activeTab === 'myskills' ? '#cca969' : '#9eb1c5'} />
               My Skills
             </button>
           )}
@@ -96,11 +120,17 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
           {isAuthenticated && (user?.is_staff || user?.is_superuser) && (
             <button
               type="button"
-              className={`btn ${activeTab === 'admin' ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: '0.5rem 0.95rem' }}
+              className="btn"
+              style={{
+                padding: '0.45rem 1.15rem',
+                backgroundColor: activeTab === 'admin' ? '#1c2838' : 'transparent',
+                color: activeTab === 'admin' ? '#f5edd8' : '#9eb1c5',
+                border: activeTab === 'admin' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
+                boxShadow: activeTab === 'admin' ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
+              }}
               onClick={() => setActiveTab('admin')}
             >
-              <Shield size={16} />
+              <Shield size={15} color={activeTab === 'admin' ? '#cca969' : '#9eb1c5'} />
               Admin
             </button>
           )}
@@ -111,7 +141,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
           {isAuthenticated ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               {isDemoMode && (
-                <span className="badge" style={{ backgroundColor: 'var(--warning-subtle)', color: 'var(--warning-text)', border: '1px solid #fde68a' }}>
+                <span className="badge" style={{ backgroundColor: 'rgba(204, 169, 105, 0.15)', color: '#eeddbb', border: '1px solid rgba(204, 169, 105, 0.4)' }}>
                   Demo Mode
                 </span>
               )}
@@ -119,7 +149,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
               <button
                 type="button"
                 className="btn btn-outline"
-                style={{ padding: '0.45rem 0.85rem' }}
+                style={{ padding: '0.45rem 0.95rem' }}
                 onClick={onOpenProfile}
                 title="View & Edit Profile"
               >
@@ -127,8 +157,9 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
                   width: '24px',
                   height: '24px',
                   borderRadius: 'var(--radius-full)',
-                  backgroundColor: 'var(--accent-indigo-subtle)',
-                  color: 'var(--accent-indigo-text)',
+                  backgroundColor: 'rgba(204, 169, 105, 0.2)',
+                  color: 'var(--primary)',
+                  border: '1px solid var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -151,10 +182,11 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className="btn btn-sm"
+                style={{ backgroundColor: 'transparent', color: '#9eb1c5', border: 'none' }}
                 onClick={enableDemoMode}
                 title="Preview with sample campus data"
               >
@@ -162,18 +194,25 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
               </button>
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-sm"
+                style={{ backgroundColor: 'transparent', color: '#f5f0e6', border: '1px solid rgba(204, 169, 105, 0.3)' }}
                 onClick={onOpenLogin}
               >
-                <LogIn size={15} />
+                <LogIn size={14} color="#cca969" />
                 Log In
               </button>
               <button
                 type="button"
-                className="btn btn-primary btn-sm"
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#1e2c3e',
+                  color: '#f5edd8',
+                  border: '1px solid rgba(204, 169, 105, 0.6)',
+                  boxShadow: '0 0 10px rgba(204, 169, 105, 0.2)',
+                }}
                 onClick={onOpenRegister}
               >
-                <UserPlus size={15} />
+                <UserPlus size={14} color="#cca969" />
                 Sign Up
               </button>
             </div>
