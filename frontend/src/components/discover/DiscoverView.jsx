@@ -206,6 +206,20 @@ export function DiscoverView() {
     setSwapSent(false);
   };
 
+  const handleOpenProfile = (peer) => {
+    const profileWithSkills = {
+      ...peer.user,
+      primarySkill: peer.skill,
+      offered_skills: peer.skill_type === 'offer'
+        ? [peer.skill?.name, 'Practical Mentorship'].filter(Boolean)
+        : (peer.user?.offered_skills || ['Algorithms & DSA', 'Python Basics']),
+      wanted_skills: peer.skill_type === 'want'
+        ? [peer.skill?.name, 'Collaborative Study'].filter(Boolean)
+        : (peer.user?.wanted_skills || ['Conversational Japanese', 'UI/UX Prototyping']),
+    };
+    setViewingProfileUser(profileWithSkills);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '4rem' }}>
       {/* Header Banner with Celestial Botanical Illustration */}
@@ -498,7 +512,7 @@ export function DiscoverView() {
                             boxShadow: '0 0 10px rgba(204, 169, 105, 0.35)',
                             cursor: 'pointer',
                           }}
-                          onClick={() => setViewingProfileUser(item.user)}
+                          onClick={() => handleOpenProfile(item)}
                           title="Click to view full student profile"
                         />
                       ) : (
@@ -518,7 +532,7 @@ export function DiscoverView() {
                             fontSize: '1.15rem',
                             cursor: 'pointer',
                           }}
-                          onClick={() => setViewingProfileUser(item.user)}
+                          onClick={() => handleOpenProfile(item)}
                           title="Click to view full student profile"
                         >
                           {(item.user?.first_name?.[0] || item.user?.username?.[0] || 'S').toUpperCase()}
@@ -527,7 +541,7 @@ export function DiscoverView() {
                       <div style={{ overflow: 'hidden' }}>
                         <div
                           style={{ fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', color: '#f5f0e6' }}
-                          onClick={() => setViewingProfileUser(item.user)}
+                          onClick={() => handleOpenProfile(item)}
                         >
                           {studentName}
                         </div>
@@ -580,7 +594,7 @@ export function DiscoverView() {
                     <button
                       type="button"
                       className="btn btn-outline btn-sm w-full"
-                      onClick={() => setViewingProfileUser(item.user)}
+                      onClick={() => handleOpenProfile(item)}
                     >
                       <User size={14} />
                       Profile
@@ -616,6 +630,10 @@ export function DiscoverView() {
           onClose={() => setViewingProfileUser(null)}
           userId={viewingProfileUser.id}
           fallbackUser={viewingProfileUser}
+          onConnect={(user) => {
+            const matchedPeer = peers.find((p) => p.user?.id === user.id) || { user, skill: user.primarySkill || { name: 'Skill Exchange' } };
+            handleConnect(matchedPeer);
+          }}
         />
       )}
 
