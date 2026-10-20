@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Compass, School, User, MessageSquare, Check, X } from 'lucide-react';
+import { Search, Compass, School, User, MessageSquare, Check, X, SearchX, RotateCcw } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
 import { LevelBadge, CategoryBadge } from '../common/Badge';
 import { UserProfileModal } from '../auth/UserProfileModal';
@@ -499,17 +499,60 @@ export function DiscoverView() {
             Searching campus peers...
           </div>
         ) : filteredPeers.length === 0 ? (
-          <div className="card" style={{ padding: '3.5rem', textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#f5f0e6' }}>No matching peers found</h3>
-            <p style={{ maxWidth: '440px', margin: '0 auto 1.25rem auto', color: '#9eb1c5' }}>
-              Try adjusting your search query, selecting another category, or switching between mentors and learners.
-            </p>
+          <div
+            className="card"
+            style={{
+              padding: '3.75rem 2rem',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '1rem',
+              backgroundColor: '#192434',
+              border: '1px solid rgba(204, 169, 105, 0.4)',
+              borderRadius: '16px',
+            }}
+          >
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: 'var(--radius-full)',
+              backgroundColor: 'rgba(204, 169, 105, 0.12)',
+              border: '1.5px solid rgba(204, 169, 105, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#cca969',
+              boxShadow: '0 0 16px rgba(204, 169, 105, 0.2)',
+            }}>
+              <SearchX size={32} />
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '1.4rem', marginBottom: '0.4rem', color: '#f5f0e6', fontFamily: 'var(--font-display)' }}>
+                No peers match your search criteria
+              </h3>
+              <p style={{ maxWidth: '480px', margin: '0 auto', color: '#9eb1c5', lineHeight: '1.6', fontSize: '0.925rem' }}>
+                We couldn't find any campus peers matching your current search query or filter selections. Try searching with different keywords or reset your filters.
+              </p>
+            </div>
+
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
+              className="btn btn-primary btn-sm"
+              style={{
+                marginTop: '0.5rem',
+                backgroundColor: '#cca969',
+                color: '#131a24',
+                fontWeight: 700,
+                padding: '0.6rem 1.4rem',
+                boxShadow: '0 4px 14px rgba(204, 169, 105, 0.25)',
+              }}
               onClick={handleResetFilters}
             >
-              Reset Filters
+              <RotateCcw size={15} />
+              Reset Search & Filters
             </button>
           </div>
         ) : (
