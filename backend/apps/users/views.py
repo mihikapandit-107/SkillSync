@@ -1,6 +1,6 @@
 from rest_framework import generics, permissions
 from .models import User
-from .serializers import RegisterSerializer, UserSerializer, PublicUserSerializer
+from .serializers import RegisterSerializer, UserSerializer, PublicProfileSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -18,6 +18,6 @@ class MeView(generics.RetrieveUpdateAPIView):
 
 
 class UserDetailView(generics.RetrieveAPIView):
-    """View another student's public profile."""
+    """View another student's public profile (includes rating info)."""
     queryset = User.objects.filter(is_active=True)
-    serializer_class = PublicUserSerializer
+    serializer_class = PublicProfileSerializer

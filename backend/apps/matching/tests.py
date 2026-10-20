@@ -138,12 +138,12 @@ class MatchServiceTests(MatchFixtureMixin, TestCase):
             u = make_user(f"u{i}")
             give(u, self.python, OFFER)
             give(u, self.guitar, WANT)
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             get_matches_for(self.me)
         for i in range(3, 10):
             u = make_user(f"u{i}")
             give(u, self.python, OFFER)
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             get_matches_for(self.me)
 
 

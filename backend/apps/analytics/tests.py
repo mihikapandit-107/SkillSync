@@ -55,16 +55,18 @@ class AnalyticsServiceUnitTests(TestCase):
         self.assertEqual(data["total_offers"], 1)
         self.assertEqual(data["total_wants"], 2)
 
-        # Absent cross-app models return None safely
-        self.assertIsNone(data["swaps_total"])
-        self.assertIsNone(data["swaps_by_status"])
-        self.assertIsNone(data["swap_success_rate"])
-        self.assertIsNone(data["sessions_total"])
-        self.assertIsNone(data["sessions_completed"])
+        self.assertEqual(data["swaps_total"], 0)
+        self.assertEqual(
+            data["swaps_by_status"],
+            {"pending": 0, "accepted": 0, "rejected": 0, "cancelled": 0},
+        )
+        self.assertEqual(data["swap_success_rate"], 0.0)
+        self.assertEqual(data["sessions_total"], 0)
+        self.assertEqual(data["sessions_completed"], 0)
         self.assertIsNone(data["average_rating"])
         self.assertEqual(
             data["integrations"],
-            {"swaps": False, "sessions": False, "reviews": False},
+            {"swaps": True, "sessions": True, "reviews": True},
         )
 
     def test_popular_skills_and_demand_gap(self):
@@ -99,9 +101,9 @@ class AnalyticsServiceUnitTests(TestCase):
         self.assertEqual(gap[0]["name"], "React")
         self.assertEqual(gap[0]["gap"], 2)
 
-    def test_absent_sessions_and_reviews_services(self):
-        self.assertIsNone(services.sessions_over_time())
-        self.assertIsNone(services.top_rated_users())
+    def test_sessions_and_reviews_available_but_empty(self):
+        self.assertEqual(len(services.sessions_over_time()), 12)
+        self.assertEqual(services.top_rated_users(), [])
 
 
 class AdminAnalyticsApiTests(APITestCase):
@@ -165,16 +167,16 @@ class AdminAnalyticsApiTests(APITestCase):
         self.assertEqual(r.data["weeks"], 4)
         self.assertEqual(len(r.data["results"]), 4)
 
-        # Sessions (graceful when model absent)
+        # Sessions (available now; weekly series is zero-filled)
         r = self.client.get(reverse("admin-analytics-sessions"))
         self.assertEqual(r.status_code, 200)
-        self.assertFalse(r.data["available"])
-        self.assertEqual(r.data["results"], [])
+        self.assertTrue(r.data["available"])
+        self.assertEqual(len(r.data["results"]), 12)
 
-        # Top rated (graceful when model absent)
+        # Top rated (available now, but no reviews yet)
         r = self.client.get(reverse("admin-analytics-top-rated"))
         self.assertEqual(r.status_code, 200)
-        self.assertFalse(r.data["available"])
+        self.assertTrue(r.data["available"])
         self.assertEqual(r.data["results"], [])
 
         # Skill gap
