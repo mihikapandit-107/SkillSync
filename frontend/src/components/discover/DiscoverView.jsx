@@ -394,15 +394,16 @@ export function DiscoverView() {
                 className="form-select"
                 style={{
                   backgroundColor: '#141d29',
-                  border: '1px solid rgba(204, 169, 105, 0.35)',
-                  color: '#f5f0e6',
+                  border: selectedCategory !== 'All' ? '1.5px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
+                  color: selectedCategory !== 'All' ? '#eeddbb' : '#f5f0e6',
+                  boxShadow: selectedCategory !== 'All' ? '0 0 10px rgba(204, 169, 105, 0.2)' : 'none',
                 }}
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c} style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>
-                    Category: {c}
+                    {c === 'All' ? 'Category: All' : `Category: ${c}`}
                   </option>
                 ))}
               </select>
@@ -414,8 +415,9 @@ export function DiscoverView() {
                 className="form-select"
                 style={{
                   backgroundColor: '#141d29',
-                  border: '1px solid rgba(204, 169, 105, 0.35)',
-                  color: '#f5f0e6',
+                  border: selectedLevel !== 'All' ? '1.5px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
+                  color: selectedLevel !== 'All' ? '#eeddbb' : '#f5f0e6',
+                  boxShadow: selectedLevel !== 'All' ? '0 0 10px rgba(204, 169, 105, 0.2)' : 'none',
                 }}
                 value={selectedLevel}
                 onChange={(e) => setSelectedLevel(e.target.value)}
@@ -435,10 +437,52 @@ export function DiscoverView() {
                 onClick={handleResetFilters}
               >
                 <X size={15} color="#cca969" />
-                Clear Filters
+                Clear All
               </button>
             )}
           </div>
+
+          {/* Active Filter Chips Bar */}
+          {(searchQuery || selectedCategory !== 'All' || selectedLevel !== 'All') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.4rem', borderTop: '1px solid rgba(204, 169, 105, 0.15)' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9eb1c5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Active Filters:
+              </span>
+              {selectedCategory !== 'All' && (
+                <span
+                  className="badge badge-category"
+                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', borderColor: '#cca969' }}
+                  onClick={() => setSelectedCategory('All')}
+                  title="Remove category filter"
+                >
+                  Category: {selectedCategory}
+                  <X size={12} />
+                </span>
+              )}
+              {selectedLevel !== 'All' && (
+                <span
+                  className="badge badge-category"
+                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', borderColor: '#cca969' }}
+                  onClick={() => setSelectedLevel('All')}
+                  title="Remove level filter"
+                >
+                  Level: {selectedLevel}
+                  <X size={12} />
+                </span>
+              )}
+              {searchQuery && (
+                <span
+                  className="badge badge-category"
+                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', borderColor: '#cca969' }}
+                  onClick={() => setSearchQuery('')}
+                  title="Clear search query"
+                >
+                  "{searchQuery}"
+                  <X size={12} />
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
