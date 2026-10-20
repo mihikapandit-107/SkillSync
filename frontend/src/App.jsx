@@ -48,7 +48,7 @@ function MainLayout() {
         onOpenProfile={() => setActiveTab('profile')}
       />
 
-      <main style={{ flex: 1, padding: '2rem 0' }}>
+      <main style={{ flex: 1, padding: '2rem 0 4.5rem 0' }}>
         <div className="container">
           {activeTab === 'discover' && <DiscoverView />}
 

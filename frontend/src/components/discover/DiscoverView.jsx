@@ -207,7 +207,7 @@ export function DiscoverView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '4rem' }}>
       {/* Header Banner with Celestial Botanical Illustration */}
       <div
         className="card"
@@ -587,12 +587,13 @@ export function DiscoverView() {
                     </button>
                     <button
                       type="button"
-                      className="btn btn-sm w-full"
+                      className="btn btn-connect btn-sm w-full"
                       style={{
                         backgroundColor: '#cca969',
                         color: '#131a24',
                         border: '1px solid #cca969',
                         fontWeight: 700,
+                        cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(204, 169, 105, 0.25)',
                       }}
                       onClick={() => handleConnect(item)}

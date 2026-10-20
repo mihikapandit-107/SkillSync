@@ -511,3 +511,48 @@ a:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
 }
+
+/* Card Action Button Enhancements */
+.btn-connect {
+  cursor: pointer;
+  transition: all var(--transition-fast) !important;
+}
+
+.btn-connect:hover {
+  background-color: #dbba77 !important;
+  border-color: #dbba77 !important;
+  box-shadow: 0 0 14px rgba(234, 179, 8, 0.35), 0 0 22px rgba(204, 169, 105, 0.25) !important;
+  transform: translateY(-1px);
+}
+
+.btn-teach {
+  cursor: pointer;
+  background-color: rgba(204, 169, 105, 0.1) !important;
+  color: #eeddbb !important;
+  border: 1px solid rgba(204, 169, 105, 0.4) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.btn-teach:hover {
+  background-color: rgba(204, 169, 105, 0.22) !important;
+  border-color: #cca969 !important;
+  box-shadow: 0 0 12px rgba(204, 169, 105, 0.3) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+.btn-learn {
+  cursor: pointer;
+  background-color: rgba(59, 130, 246, 0.16) !important;
+  color: #93c5fd !important;
+  border: 1px solid rgba(96, 165, 250, 0.38) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.btn-learn:hover {
+  background-color: rgba(59, 130, 246, 0.3) !important;
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.35) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
