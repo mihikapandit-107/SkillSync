@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, Compass, School, User, MessageSquare, Check, X } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
 import { LevelBadge, CategoryBadge } from '../common/Badge';
@@ -119,7 +119,7 @@ export function DiscoverView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedLevel, setSelectedLevel] = useState('All');
-  const [peers, setPeers] = useState([]);
+  const [allPeers, setAllPeers] = useState(DEMO_DISCOVERY_PEERS);
   const [loading, setLoading] = useState(true);
   const [viewingProfileUser, setViewingProfileUser] = useState(null);
   const [swapTargetPeer, setSwapTargetPeer] = useState(null);
@@ -127,73 +127,71 @@ export function DiscoverView() {
 
   const fetchPeers = useCallback(async () => {
     setLoading(true);
-
-    if (isDemoMode) {
-      let filtered = DEMO_DISCOVERY_PEERS.filter((item) => item.skill_type === skillType);
-      if (selectedCategory !== 'All') {
-        filtered = filtered.filter((item) => item.skill.category?.toLowerCase() === selectedCategory.toLowerCase());
-      }
-      if (selectedLevel !== 'All') {
-        filtered = filtered.filter((item) => item.level.toLowerCase() === selectedLevel.toLowerCase());
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter(
-          (item) =>
-            item.skill.name.toLowerCase().includes(q) ||
-            item.user.first_name.toLowerCase().includes(q) ||
-            item.user.last_name.toLowerCase().includes(q) ||
-            (item.user.college && item.user.college.toLowerCase().includes(q))
-        );
-      }
-      setPeers(filtered);
-      setLoading(false);
-      return;
-    }
-
     try {
-      const filters = {
-        type: skillType,
-      };
-      if (searchQuery.trim()) filters.q = searchQuery.trim();
-      if (selectedCategory !== 'All') filters.category = selectedCategory;
-      if (selectedLevel !== 'All') filters.level = selectedLevel;
-
-      const data = await skillsApi.discoverSkills(filters);
+      const data = await skillsApi.discoverSkills({ type: skillType });
       const results = Array.isArray(data) ? data : (data?.results || []);
-
-      if (results.length === 0 && !searchQuery.trim() && selectedCategory === 'All' && selectedLevel === 'All') {
-        // Fallback demo peers if backend DB is empty
-        const fallback = DEMO_DISCOVERY_PEERS.filter((item) => item.skill_type === skillType);
-        setPeers(fallback);
+      if (results.length > 0) {
+        setAllPeers(results);
       } else {
-        setPeers(results);
+        setAllPeers(DEMO_DISCOVERY_PEERS);
       }
     } catch (err) {
       console.warn('Could not fetch discover peers via API, using sample peers:', err);
-      let filtered = DEMO_DISCOVERY_PEERS.filter((item) => item.skill_type === skillType);
-      if (selectedCategory !== 'All') {
-        filtered = filtered.filter((item) => item.skill.category?.toLowerCase() === selectedCategory.toLowerCase());
-      }
-      if (selectedLevel !== 'All') {
-        filtered = filtered.filter((item) => item.level.toLowerCase() === selectedLevel.toLowerCase());
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter((item) => item.skill.name.toLowerCase().includes(q));
-      }
-      setPeers(filtered);
+      setAllPeers(DEMO_DISCOVERY_PEERS);
     } finally {
       setLoading(false);
     }
-  }, [skillType, searchQuery, selectedCategory, selectedLevel, isDemoMode]);
+  }, [skillType]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchPeers();
-    }, 250);
-    return () => clearTimeout(timer);
+    fetchPeers();
   }, [fetchPeers]);
+
+  // Live client-side search filtering across peer cards
+  const filteredPeers = useMemo(() => {
+    return allPeers.filter((item) => {
+      // Match offer vs want
+      if (item.skill_type !== skillType) return false;
+
+      // Category filter
+      if (selectedCategory !== 'All') {
+        const cat = item.skill?.category || '';
+        if (cat.toLowerCase() !== selectedCategory.toLowerCase()) return false;
+      }
+
+      // Level filter
+      if (selectedLevel !== 'All') {
+        const lvl = item.level || '';
+        if (lvl.toLowerCase() !== selectedLevel.toLowerCase()) return false;
+      }
+
+      // Live search input: matches peer name, skill title, or department/college
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const skillName = (item.skill?.name || '').toLowerCase();
+        const firstName = (item.user?.first_name || '').toLowerCase();
+        const lastName = (item.user?.last_name || '').toLowerCase();
+        const fullName = `${firstName} ${lastName}`.trim();
+        const username = (item.user?.username || '').toLowerCase();
+        const college = (item.user?.college || '').toLowerCase();
+        const bio = (item.user?.bio || '').toLowerCase();
+        const desc = (item.description || '').toLowerCase();
+
+        return (
+          skillName.includes(q) ||
+          firstName.includes(q) ||
+          lastName.includes(q) ||
+          fullName.includes(q) ||
+          username.includes(q) ||
+          college.includes(q) ||
+          bio.includes(q) ||
+          desc.includes(q)
+        );
+      }
+
+      return true;
+    });
+  }, [allPeers, skillType, selectedCategory, selectedLevel, searchQuery]);
 
   const handleResetFilters = () => {
     setSearchQuery('');
@@ -448,7 +446,7 @@ export function DiscoverView() {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#9eb1c5', letterSpacing: '0.01em' }}>
-            Found {peers.length} campus {peers.length === 1 ? 'match' : 'matches'}
+            Found {filteredPeers.length} campus {filteredPeers.length === 1 ? 'match' : 'matches'}
           </span>
         </div>
 
@@ -456,7 +454,7 @@ export function DiscoverView() {
           <div className="card" style={{ padding: '3rem', textAlign: 'center', color: '#9eb1c5' }}>
             Searching campus peers...
           </div>
-        ) : peers.length === 0 ? (
+        ) : filteredPeers.length === 0 ? (
           <div className="card" style={{ padding: '3.5rem', textAlign: 'center' }}>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#f5f0e6' }}>No matching peers found</h3>
             <p style={{ maxWidth: '440px', margin: '0 auto 1.25rem auto', color: '#9eb1c5' }}>
@@ -476,7 +474,7 @@ export function DiscoverView() {
             gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
             gap: '1.35rem',
           }}>
-            {peers.map((item) => {
+            {filteredPeers.map((item) => {
               const studentName = item.user?.first_name || item.user?.last_name
                 ? `${item.user?.first_name || ''} ${item.user?.last_name || ''}`.trim()
                 : (item.user?.username || 'Student');
