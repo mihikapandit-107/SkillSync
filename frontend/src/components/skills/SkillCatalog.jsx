@@ -1,22 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Layers, X } from 'lucide-react';
+import { Search, Plus, Layers, X, AlertCircle, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
+import { formatApiError } from '../../api/client';
 import { CategoryBadge } from '../common/Badge';
 import { AddSkillModal } from './AddSkillModal';
+import { useAuth } from '../../context/useAuth';
 
-const INITIAL_FALLBACK_SKILLS = [
+// Only used in explicit Demo Mode (no backend). Real accounts never see these.
+const DEMO_SKILLS = [
   { id: 101, name: 'Python Programming', category: 'Programming' },
   { id: 102, name: 'React & Frontend', category: 'Programming' },
   { id: 103, name: 'Data Structures & Algorithms', category: 'Programming' },
   { id: 104, name: 'UI/UX Design in Figma', category: 'Design & UI/UX' },
-  { id: 105, name: 'Graphic Design & Branding', category: 'Design & UI/UX' },
   { id: 106, name: 'Conversational Spanish', category: 'Languages' },
-  { id: 107, name: 'Japanese for Beginners', category: 'Languages' },
-  { id: 108, name: 'Calculus & Linear Algebra', category: 'Academics & STEM' },
-  { id: 109, name: 'Organic Chemistry', category: 'Academics & STEM' },
   { id: 110, name: 'Acoustic Guitar Basics', category: 'Music & Audio' },
-  { id: 111, name: 'Digital Photography & Editing', category: 'Design & UI/UX' },
-  { id: 112, name: 'Public Speaking & Presentations', category: 'Writing & Communication' },
 ];
 
 const CATEGORIES = [
@@ -30,54 +27,62 @@ const CATEGORIES = [
 ];
 
 export function SkillCatalog({ onSelectSkillForUser }) {
+  const { isAuthenticated, isDemoMode } = useAuth();
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [page, setPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
   const fetchSkills = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+
+    // Demo mode: filter the sample list locally, no API calls.
+    if (isDemoMode) {
+      const q = searchQuery.trim().toLowerCase();
+      const filtered = DEMO_SKILLS.filter((s) => {
+        if (selectedCategory !== 'All' && s.category !== selectedCategory) return false;
+        return !q || s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q);
+      });
+      setSkills(filtered);
+      setTotalCount(filtered.length);
+      setLoading(false);
+      return;
+    }
+
+    // The catalog endpoint requires login.
+    if (!isAuthenticated) {
+      setSkills([]);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const params = {};
+      const params = { page };
       if (searchQuery.trim()) params.search = searchQuery.trim();
       if (selectedCategory !== 'All') params.category = selectedCategory;
 
       const data = await skillsApi.getCatalogSkills(params);
       const results = Array.isArray(data) ? data : (data?.results || []);
-      const count = data?.count ?? results.length;
-
-      if (results.length === 0 && !searchQuery.trim() && selectedCategory === 'All') {
-        // Backend DB might be empty yet, show sample catalog
-        setSkills(INITIAL_FALLBACK_SKILLS);
-        setTotalCount(INITIAL_FALLBACK_SKILLS.length);
-      } else {
-        setSkills(results);
-        setTotalCount(count);
-      }
+      setSkills(results);
+      setTotalCount(data?.count ?? results.length);
     } catch (err) {
-      console.warn('Could not fetch catalog from API, using fallback data:', err);
-      // Filter fallback skills locally
-      let filtered = [...INITIAL_FALLBACK_SKILLS];
-      if (selectedCategory !== 'All') {
-        filtered = filtered.filter((s) => s.category.toLowerCase() === selectedCategory.toLowerCase());
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter((s) => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q));
-      }
-      setSkills(filtered);
-      setTotalCount(filtered.length);
+      setSkills([]);
+      setTotalCount(0);
+      setLoadError(formatApiError(err));
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, page, isAuthenticated, isDemoMode]);
 
+  // Debounce typing in the search box.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchSkills();
-    }, 250);
+    const timer = setTimeout(fetchSkills, 250);
     return () => clearTimeout(timer);
   }, [fetchSkills]);
 
@@ -86,9 +91,16 @@ export function SkillCatalog({ onSelectSkillForUser }) {
     setTotalCount((prev) => prev + 1);
   };
 
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('All');
+  };
+
+  const noFilters = !searchQuery.trim() && selectedCategory === 'All';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '4rem' }}>
-      {/* Header Banner */}
+      {/* Header */}
       <div className="card" style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
@@ -100,22 +112,21 @@ export function SkillCatalog({ onSelectSkillForUser }) {
           </p>
         </div>
 
-        <div>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus size={16} />
-            Suggest New Skill
-          </button>
-        </div>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setIsAddModalOpen(true)}
+          disabled={!isAuthenticated || isDemoMode}
+          title={isDemoMode ? 'Not available in demo mode' : (!isAuthenticated ? 'Log in to suggest a skill' : undefined)}
+        >
+          <Plus size={16} />
+          Suggest New Skill
+        </button>
       </div>
 
-      {/* Search & Category Filter Bar */}
+      {/* Search & category filter */}
       <div className="card" style={{ padding: '1.25rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Search Input */}
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -123,19 +134,21 @@ export function SkillCatalog({ onSelectSkillForUser }) {
               style={{ paddingLeft: '2.5rem', paddingRight: searchQuery ? '2.5rem' : '1rem' }}
               placeholder="Search skills by name (e.g. Python, UI/UX, Spanish)..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
             />
-            <Search
-              size={18}
-              color="var(--text-muted)"
-              style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }}
-            />
+            <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
             {searchQuery && (
               <button
                 type="button"
                 className="btn-icon"
                 style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)' }}
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('');
+                  setPage(1);
+                }}
                 aria-label="Clear search"
               >
                 <X size={16} />
@@ -143,15 +156,16 @@ export function SkillCatalog({ onSelectSkillForUser }) {
             )}
           </div>
 
-          {/* Category Tabs */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 type="button"
                 className={`btn btn-sm ${selectedCategory === cat ? 'btn-primary' : 'btn-outline'}`}
-                style={{ borderRadius: 'var(--radius-full)' }}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setPage(1);
+                }}
               >
                 {cat}
               </button>
@@ -160,56 +174,65 @@ export function SkillCatalog({ onSelectSkillForUser }) {
         </div>
       </div>
 
-      {/* Skills Grid */}
+      {/* Results */}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem' }}>
           <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
             Showing {skills.length} of {totalCount} {totalCount === 1 ? 'skill' : 'skills'}
           </span>
         </div>
 
-        {loading ? (
+        {!isAuthenticated ? (
+          <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
+            <h3 style={{ marginBottom: '0.5rem' }}>Log in to browse the catalog</h3>
+            <p>The skill catalog is available to signed-in students.</p>
+          </div>
+        ) : loading ? (
           <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
             Loading skills...
           </div>
-        ) : skills.length === 0 ? (
-          <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
-            <p style={{ marginBottom: '1rem' }}>No skills found matching your search.</p>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('All');
-              }}
-            >
-              Reset Filters
+        ) : loadError ? (
+          <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+            <div className="alert alert-danger" style={{ justifyContent: 'center' }}>
+              <AlertCircle size={18} />
+              <span>{loadError}</span>
+            </div>
+            <button type="button" className="btn btn-outline btn-sm" onClick={fetchSkills}>
+              <RotateCcw size={14} />
+              Try again
             </button>
           </div>
+        ) : skills.length === 0 ? (
+          <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
+            {noFilters ? (
+              <>
+                <h3 style={{ marginBottom: '0.5rem' }}>The catalog is empty</h3>
+                <p>
+                  Suggest the first skill with the button above, or ask an admin to run{' '}
+                  <code>python manage.py seed_skills</code>.
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ marginBottom: '1rem' }}>No skills match your search.</p>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={resetFilters}>
+                  Reset filters
+                </button>
+              </>
+            )}
+          </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '1.25rem',
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
             {skills.map((skill) => (
               <div
                 key={skill.id}
                 className="card card-hover"
-                style={{
-                  padding: '1.25rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                }}
+                style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem' }}
               >
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <h3 style={{ fontSize: '1.05rem', color: 'var(--text-main)' }}>
-                      {skill.name}
-                    </h3>
-                  </div>
+                  <h3 style={{ fontSize: '1.05rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                    {skill.name}
+                  </h3>
                   <CategoryBadge category={skill.category} />
                 </div>
 
@@ -233,9 +256,35 @@ export function SkillCatalog({ onSelectSkillForUser }) {
             ))}
           </div>
         )}
+
+        {/* Catalog Pagination */}
+        {Math.ceil(totalCount / 20) > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginTop: '1.75rem' }}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft size={16} />
+              Previous
+            </button>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Page {page} of {Math.ceil(totalCount / 20)}
+            </span>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={page >= Math.ceil(totalCount / 20)}
+              onClick={() => setPage((p) => Math.min(Math.ceil(totalCount / 20), p + 1))}
+            >
+              Next
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Add Skill Modal */}
       <AddSkillModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

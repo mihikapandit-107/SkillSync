@@ -58,15 +58,15 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: 'var(--text-main)' }}>Backend Integration</h4>
-            <p style={{ fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '0.5rem' }}>
-              Powered by Django REST Framework & JWT Authentication.
+            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: 'var(--text-main)' }}>Campus Safety & Community</h4>
+            <p style={{ fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>
+              Built for students to collaborate with trust. Leave honest peer reviews and report any concerns to moderators.
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span className="badge badge-category">REST API</span>
-              <span className="badge badge-category">SimpleJWT</span>
-              <span className="badge badge-category">SQLite</span>
-              <span className="badge badge-category">React 19</span>
+              <span className="badge badge-category">Safe Exchange</span>
+              <span className="badge badge-category">Peer Mentoring</span>
+              <span className="badge badge-category">Campus Verified</span>
+              <span className="badge badge-category">Skill Growth</span>
             </div>
           </div>
         </div>

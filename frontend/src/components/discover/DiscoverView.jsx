@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Compass, School, User, MessageSquare, Check, X, SearchX, RotateCcw } from 'lucide-react';
+import { Search, Compass, School, User, MessageSquare, X, SearchX, RotateCcw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
+import { formatApiError } from '../../api/client';
 import { LevelBadge, CategoryBadge } from '../common/Badge';
 import { UserProfileModal } from '../auth/UserProfileModal';
-import { Modal } from '../common/Modal';
+import { SwapRequestModal } from '../swaps/SwapRequestModal';
 import { useAuth } from '../../context/useAuth';
 
+// Only shown in explicit Demo Mode. Real accounts never see this data.
 const DEMO_DISCOVERY_PEERS = [
   {
     id: 201,
@@ -17,6 +19,8 @@ const DEMO_DISCOVERY_PEERS = [
       college: 'Faculty of Fine Arts & Design',
       avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
       bio: 'Design student specializing in Figma UI/UX, responsive layouts, and user research. Happy to review portfolios or teach design basics.',
+      offered_skills: ['UI/UX Design in Figma'],
+      wanted_skills: ['Python Programming'],
     },
     skill: { id: 104, name: 'UI/UX Design in Figma', category: 'Design & UI/UX' },
     skill_type: 'offer',
@@ -33,6 +37,8 @@ const DEMO_DISCOVERY_PEERS = [
       college: 'School of Computer Science',
       avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=160&q=80',
       bio: 'Junior interested in algorithms, backend development, and open source. Looking for help with conversational Japanese.',
+      offered_skills: ['Data Structures & Algorithms'],
+      wanted_skills: ['Japanese for Beginners'],
     },
     skill: { id: 103, name: 'Data Structures & Algorithms', category: 'Programming' },
     skill_type: 'offer',
@@ -49,27 +55,13 @@ const DEMO_DISCOVERY_PEERS = [
       college: 'Department of Modern Languages',
       avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=160&q=80',
       bio: 'Native Spanish speaker and literature major. Eager to practice Python basics or data science in exchange.',
+      offered_skills: ['Conversational Spanish'],
+      wanted_skills: ['Python Programming'],
     },
     skill: { id: 106, name: 'Conversational Spanish', category: 'Languages' },
     skill_type: 'offer',
     level: 'advanced',
     description: 'Offering weekly conversation practice, pronunciation tips, and grammatical coaching.',
-  },
-  {
-    id: 204,
-    user: {
-      id: 5,
-      username: 'marcus_math',
-      first_name: 'Marcus',
-      last_name: 'Taylor',
-      college: 'Department of Mathematics',
-      avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80',
-      bio: 'Applied math major with strong foundations in calculus and linear algebra.',
-    },
-    skill: { id: 108, name: 'Calculus & Linear Algebra', category: 'Academics & STEM' },
-    skill_type: 'offer',
-    level: 'advanced',
-    description: 'Can help break down difficult math concepts, exam problem sets, and vector spaces.',
   },
   {
     id: 205,
@@ -80,26 +72,13 @@ const DEMO_DISCOVERY_PEERS = [
       last_name: 'Patel',
       college: 'School of Information Systems',
       bio: 'Frontend enthusiast building web apps. Seeking a peer partner to learn acoustic guitar chords.',
+      offered_skills: ['React & Frontend'],
+      wanted_skills: ['Acoustic Guitar Basics'],
     },
     skill: { id: 110, name: 'Acoustic Guitar Basics', category: 'Music & Audio' },
     skill_type: 'want',
     level: 'beginner',
     description: 'Total beginner wanting to learn fingerpicking, strumming rhythms, and basic open chords.',
-  },
-  {
-    id: 206,
-    user: {
-      id: 7,
-      username: 'liam_dev',
-      first_name: 'Liam',
-      last_name: 'O\'Connor',
-      college: 'School of Computer Science',
-      bio: 'Building fullstack prototypes. Looking for design feedback on mobile app interfaces.',
-    },
-    skill: { id: 104, name: 'UI/UX Design in Figma', category: 'Design & UI/UX' },
-    skill_type: 'want',
-    level: 'beginner',
-    description: 'Want guidance on choosing typography, spacing scales, and creating accessible mobile UI designs.',
   },
 ];
 
@@ -113,114 +92,108 @@ const CATEGORIES = [
   'Writing & Communication',
 ];
 
-export function DiscoverView() {
-  const { isDemoMode } = useAuth();
+export function DiscoverView({ onRequireLogin }) {
+  const { isAuthenticated, isDemoMode } = useAuth();
   const [skillType, setSkillType] = useState('offer'); // 'offer' | 'want'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedLevel, setSelectedLevel] = useState('All');
-  const [allPeers, setAllPeers] = useState(DEMO_DISCOVERY_PEERS);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [allPeers, setAllPeers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewingProfileUser, setViewingProfileUser] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [viewingPeer, setViewingPeer] = useState(null); // Discover item shown in the profile modal
   const [swapTargetPeer, setSwapTargetPeer] = useState(null);
-  const [swapSent, setSwapSent] = useState(false);
 
   const fetchPeers = useCallback(async () => {
+    if (!isAuthenticated) {
+      setAllPeers([]);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
+
+    // Demo mode: sample peers only. Real mode: real API data only.
+    if (isDemoMode) {
+      const filtered = DEMO_DISCOVERY_PEERS.filter((item) => {
+        if (item.skill_type !== skillType) return false;
+        if (selectedCategory !== 'All' && item.skill?.category?.toLowerCase() !== selectedCategory.toLowerCase()) return false;
+        if (selectedLevel !== 'All' && item.level?.toLowerCase() !== selectedLevel.toLowerCase()) return false;
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const match = [
+            item.skill?.name,
+            item.user?.username,
+            item.user?.first_name,
+            item.user?.last_name,
+            item.user?.college,
+            item.user?.bio,
+            item.description,
+          ].some((v) => (v || '').toLowerCase().includes(q));
+          if (!match) return false;
+        }
+        return true;
+      });
+      setAllPeers(filtered);
+      setTotalCount(filtered.length);
+      setLoadError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setLoadError(null);
     try {
-      const data = await skillsApi.discoverSkills({ type: skillType });
+      const filters = {
+        type: skillType,
+        page,
+      };
+      if (searchQuery.trim()) filters.q = searchQuery.trim();
+      if (selectedCategory !== 'All') filters.category = selectedCategory;
+      if (selectedLevel !== 'All') filters.level = selectedLevel;
+
+      const data = await skillsApi.discoverSkills(filters);
       const results = Array.isArray(data) ? data : (data?.results || []);
-      if (results.length > 0) {
-        setAllPeers(results);
-      } else {
-        setAllPeers(DEMO_DISCOVERY_PEERS);
-      }
+      setAllPeers(results);
+      setTotalCount(data?.count ?? results.length);
     } catch (err) {
-      console.warn('Could not fetch discover peers via API, using sample peers:', err);
-      setAllPeers(DEMO_DISCOVERY_PEERS);
+      setAllPeers([]);
+      setTotalCount(0);
+      setLoadError(formatApiError(err));
     } finally {
       setLoading(false);
     }
-  }, [skillType]);
+  }, [skillType, searchQuery, selectedCategory, selectedLevel, page, isAuthenticated, isDemoMode]);
 
   useEffect(() => {
     fetchPeers();
   }, [fetchPeers]);
 
-  // Live client-side search filtering across peer cards
   const filteredPeers = useMemo(() => {
-    return allPeers.filter((item) => {
-      // Match offer vs want
-      if (item.skill_type !== skillType) return false;
+    return allPeers;
+  }, [allPeers]);
 
-      // Category filter
-      if (selectedCategory !== 'All') {
-        const cat = item.skill?.category || '';
-        if (cat.toLowerCase() !== selectedCategory.toLowerCase()) return false;
-      }
-
-      // Level filter
-      if (selectedLevel !== 'All') {
-        const lvl = item.level || '';
-        if (lvl.toLowerCase() !== selectedLevel.toLowerCase()) return false;
-      }
-
-      // Live search input: matches peer name, skill title, or department/college
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const skillName = (item.skill?.name || '').toLowerCase();
-        const firstName = (item.user?.first_name || '').toLowerCase();
-        const lastName = (item.user?.last_name || '').toLowerCase();
-        const fullName = `${firstName} ${lastName}`.trim();
-        const username = (item.user?.username || '').toLowerCase();
-        const college = (item.user?.college || '').toLowerCase();
-        const bio = (item.user?.bio || '').toLowerCase();
-        const desc = (item.description || '').toLowerCase();
-
-        return (
-          skillName.includes(q) ||
-          firstName.includes(q) ||
-          lastName.includes(q) ||
-          fullName.includes(q) ||
-          username.includes(q) ||
-          college.includes(q) ||
-          bio.includes(q) ||
-          desc.includes(q)
-        );
-      }
-
-      return true;
-    });
-  }, [allPeers, skillType, selectedCategory, selectedLevel, searchQuery]);
+  const hasActiveFilters = searchQuery || selectedCategory !== 'All' || selectedLevel !== 'All';
 
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('All');
     setSelectedLevel('All');
+    setPage(1);
   };
 
   const handleConnect = (peer) => {
+    if (!isAuthenticated) {
+      onRequireLogin?.();
+      return;
+    }
     setSwapTargetPeer(peer);
-    setSwapSent(false);
-  };
-
-  const handleOpenProfile = (peer) => {
-    const profileWithSkills = {
-      ...peer.user,
-      primarySkill: peer.skill,
-      offered_skills: peer.skill_type === 'offer'
-        ? [peer.skill?.name, 'Practical Mentorship'].filter(Boolean)
-        : (peer.user?.offered_skills || ['Algorithms & DSA', 'Python Basics']),
-      wanted_skills: peer.skill_type === 'want'
-        ? [peer.skill?.name, 'Collaborative Study'].filter(Boolean)
-        : (peer.user?.wanted_skills || ['Conversational Japanese', 'UI/UX Prototyping']),
-    };
-    setViewingProfileUser(profileWithSkills);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '4rem' }}>
-      {/* Header Banner with Celestial Botanical Illustration */}
+      {/* Header Banner */}
       <div
         className="card"
         style={{
@@ -232,86 +205,30 @@ export function DiscoverView() {
           boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(204, 169, 105, 0.1)',
         }}
       >
-        {/* Celestial Botanical SVG Art Overlay on Right */}
+        {/* Celestial botanical art, right side */}
         <svg
           width="260"
           height="190"
           viewBox="0 0 260 190"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          style={{
-            position: 'absolute',
-            right: '1rem',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            pointerEvents: 'none',
-            opacity: 0.75,
-          }}
+          style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.75 }}
         >
-          {/* Sparkles / Starlight */}
           <path d="M195 30 L197 40 L207 42 L197 44 L195 54 L193 44 L183 42 L193 40 Z" fill="#cca969" opacity="0.85" />
           <path d="M145 60 L146 66 L152 67 L146 68 L145 74 L144 68 L138 67 L144 66 Z" fill="#cca969" opacity="0.65" />
           <path d="M225 110 L226 114 L230 115 L226 116 L225 120 L224 116 L220 115 L224 114 Z" fill="#cca969" opacity="0.6" />
           <circle cx="218" cy="38" r="1.5" fill="#cca969" opacity="0.7" />
           <circle cx="170" cy="22" r="1.5" fill="#cca969" opacity="0.5" />
           <circle cx="235" cy="70" r="1.2" fill="#cca969" opacity="0.6" />
-
-          {/* Crescent Moon */}
-          <path
-            d="M174 38 C168 45 165 54 165 64 C165 79 175 92 190 96 C176 99 159 90 155 74 C152 61 159 46 174 38 Z"
-            stroke="#cca969"
-            strokeWidth="1.2"
-            fill="rgba(204, 169, 105, 0.05)"
-            opacity="0.85"
-          />
-
-          {/* Botanical Foliage & Leaves */}
-          <path
-            d="M135 155 C155 130 180 105 205 65 C215 48 225 32 230 20"
-            stroke="#cca969"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-            fill="none"
-            opacity="0.6"
-          />
-          <path
-            d="M175 115 C164 110 158 102 161 95 C168 95 174 105 175 115 Z"
-            stroke="#cca969"
-            strokeWidth="1"
-            fill="rgba(204, 169, 105, 0.08)"
-            opacity="0.75"
-          />
-          <path
-            d="M192 90 C200 86 205 78 202 70 C195 72 191 81 192 90 Z"
-            stroke="#cca969"
-            strokeWidth="1"
-            fill="rgba(204, 169, 105, 0.08)"
-            opacity="0.75"
-          />
-          <path
-            d="M208 65 C218 62 224 55 222 47 C215 48 210 57 208 65 Z"
-            stroke="#cca969"
-            strokeWidth="1"
-            fill="rgba(204, 169, 105, 0.08)"
-            opacity="0.75"
-          />
-          <path
-            d="M158 135 C147 133 142 125 145 119 C152 120 156 128 158 135 Z"
-            stroke="#cca969"
-            strokeWidth="1"
-            fill="rgba(204, 169, 105, 0.08)"
-            opacity="0.75"
-          />
-          <path
-            d="M170 160 C185 148 200 132 215 110"
-            stroke="#cca969"
-            strokeWidth="1"
-            strokeDasharray="2 3"
-            opacity="0.45"
-          />
+          <path d="M174 38 C168 45 165 54 165 64 C165 79 175 92 190 96 C176 99 159 90 155 74 C152 61 159 46 174 38 Z" stroke="#cca969" strokeWidth="1.2" fill="rgba(204, 169, 105, 0.05)" opacity="0.85" />
+          <path d="M135 155 C155 130 180 105 205 65 C215 48 225 32 230 20" stroke="#cca969" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.6" />
+          <path d="M175 115 C164 110 158 102 161 95 C168 95 174 105 175 115 Z" stroke="#cca969" strokeWidth="1" fill="rgba(204, 169, 105, 0.08)" opacity="0.75" />
+          <path d="M192 90 C200 86 205 78 202 70 C195 72 191 81 192 90 Z" stroke="#cca969" strokeWidth="1" fill="rgba(204, 169, 105, 0.08)" opacity="0.75" />
+          <path d="M208 65 C218 62 224 55 222 47 C215 48 210 57 208 65 Z" stroke="#cca969" strokeWidth="1" fill="rgba(204, 169, 105, 0.08)" opacity="0.75" />
+          <path d="M158 135 C147 133 142 125 145 119 C152 120 156 128 158 135 Z" stroke="#cca969" strokeWidth="1" fill="rgba(204, 169, 105, 0.08)" opacity="0.75" />
+          <path d="M170 160 C185 148 200 132 215 110" stroke="#cca969" strokeWidth="1" strokeDasharray="2 3" opacity="0.45" />
         </svg>
 
-        {/* Content */}
         <div style={{ position: 'relative', zIndex: 1, maxWidth: '680px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
             <Compass size={22} color="#cca969" />
@@ -323,180 +240,139 @@ export function DiscoverView() {
             Browse students across campus ready to exchange knowledge. Match with peers who can teach what you want to learn, or connect with peers looking for your expertise.
           </p>
 
-          {/* Primary Type Switcher: Offer vs Want */}
+          {/* Offer vs Want switcher */}
           <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn"
-              style={{
-                padding: '0.6rem 1.35rem',
-                backgroundColor: skillType === 'offer' ? '#cca969' : 'rgba(20, 29, 41, 0.65)',
-                color: skillType === 'offer' ? '#121822' : '#cbd5e1',
-                border: skillType === 'offer' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
-                fontWeight: skillType === 'offer' ? 700 : 500,
-                boxShadow: skillType === 'offer' ? '0 4px 14px rgba(204, 169, 105, 0.28)' : 'none',
-              }}
-              onClick={() => setSkillType('offer')}
-            >
-              Peers Offering to Teach (Mentors)
-            </button>
-            <button
-              type="button"
-              className="btn"
-              style={{
-                padding: '0.6rem 1.35rem',
-                backgroundColor: skillType === 'want' ? '#cca969' : 'rgba(20, 29, 41, 0.65)',
-                color: skillType === 'want' ? '#121822' : '#cbd5e1',
-                border: skillType === 'want' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
-                fontWeight: skillType === 'want' ? 700 : 500,
-                boxShadow: skillType === 'want' ? '0 4px 14px rgba(204, 169, 105, 0.28)' : 'none',
-              }}
-              onClick={() => setSkillType('want')}
-            >
-              Peers Looking to Learn (Students)
-            </button>
+            {[
+              { id: 'offer', label: 'Peers Offering to Teach (Mentors)' },
+              { id: 'want', label: 'Peers Looking to Learn (Students)' },
+            ].map((opt) => {
+              const active = skillType === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className="btn"
+                  style={{
+                    padding: '0.6rem 1.35rem',
+                    backgroundColor: active ? '#cca969' : 'rgba(20, 29, 41, 0.65)',
+                    color: active ? '#121822' : '#cbd5e1',
+                    border: active ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
+                    fontWeight: active ? 700 : 500,
+                    boxShadow: active ? '0 4px 14px rgba(204, 169, 105, 0.28)' : 'none',
+                  }}
+                  onClick={() => {
+                    setSkillType(opt.id);
+                    setPage(1);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Controls */}
-      <div
-        className="card"
-        style={{
-          padding: '1.15rem 1.4rem',
-          backgroundColor: '#182434',
-          border: '1px solid rgba(204, 169, 105, 0.35)',
-        }}
-      >
+      {/* Search + filters */}
+      <div className="card" style={{ padding: '1.15rem 1.4rem', backgroundColor: '#182434', border: '1px solid rgba(204, 169, 105, 0.35)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', alignItems: 'center' }}>
-            {/* Search Input */}
             <div style={{ position: 'relative' }}>
               <input
                 type="text"
                 className="form-input"
-                style={{
-                  paddingLeft: '2.5rem',
-                  backgroundColor: '#141d29',
-                  border: '1px solid rgba(204, 169, 105, 0.35)',
-                  color: '#f5f0e6',
-                }}
+                style={{ paddingLeft: '2.5rem', backgroundColor: '#141d29', border: '1px solid rgba(204, 169, 105, 0.35)', color: '#f5f0e6' }}
                 placeholder="Search skill or student name..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
               />
               <Search size={16} color="#cca969" style={{ position: 'absolute', left: '0.95rem', top: '50%', transform: 'translateY(-50%)' }} />
             </div>
 
-            {/* Category Dropdown */}
-            <div>
-              <select
-                className="form-select"
-                style={{
-                  backgroundColor: '#141d29',
-                  border: selectedCategory !== 'All' ? '1.5px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
-                  color: selectedCategory !== 'All' ? '#eeddbb' : '#f5f0e6',
-                  boxShadow: selectedCategory !== 'All' ? '0 0 10px rgba(204, 169, 105, 0.2)' : 'none',
-                }}
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c} style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>
-                    {c === 'All' ? 'Category: All' : `Category: ${c}`}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              className="form-select"
+              style={{
+                backgroundColor: '#141d29',
+                border: selectedCategory !== 'All' ? '1.5px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
+                color: selectedCategory !== 'All' ? '#eeddbb' : '#f5f0e6',
+              }}
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setPage(1);
+              }}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c} style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>
+                  {c === 'All' ? 'Category: All' : `Category: ${c}`}
+                </option>
+              ))}
+            </select>
 
-            {/* Level Dropdown */}
-            <div>
-              <select
-                className="form-select"
-                style={{
-                  backgroundColor: '#141d29',
-                  border: selectedLevel !== 'All' ? '1.5px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
-                  color: selectedLevel !== 'All' ? '#eeddbb' : '#f5f0e6',
-                  boxShadow: selectedLevel !== 'All' ? '0 0 10px rgba(204, 169, 105, 0.2)' : 'none',
-                }}
-                value={selectedLevel}
-                onChange={(e) => setSelectedLevel(e.target.value)}
-              >
-                <option value="All" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Proficiency: All Levels</option>
-                <option value="beginner" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Beginner</option>
-                <option value="intermediate" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Intermediate</option>
-                <option value="advanced" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Advanced</option>
-              </select>
-            </div>
+            <select
+              className="form-select"
+              style={{
+                backgroundColor: '#141d29',
+                border: selectedLevel !== 'All' ? '1.5px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
+                color: selectedLevel !== 'All' ? '#eeddbb' : '#f5f0e6',
+              }}
+              value={selectedLevel}
+              onChange={(e) => {
+                setSelectedLevel(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="All" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Proficiency: All Levels</option>
+              <option value="beginner" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Beginner</option>
+              <option value="intermediate" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Intermediate</option>
+              <option value="advanced" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Advanced</option>
+            </select>
 
-            {/* Reset Button */}
-            {(searchQuery || selectedCategory !== 'All' || selectedLevel !== 'All') && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={handleResetFilters}
-              >
+            {hasActiveFilters && (
+              <button type="button" className="btn btn-secondary btn-sm" onClick={handleResetFilters}>
                 <X size={15} color="#cca969" />
                 Clear All
               </button>
             )}
           </div>
-
-          {/* Active Filter Chips Bar */}
-          {(searchQuery || selectedCategory !== 'All' || selectedLevel !== 'All') && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.4rem', borderTop: '1px solid rgba(204, 169, 105, 0.15)' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9eb1c5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Active Filters:
-              </span>
-              {selectedCategory !== 'All' && (
-                <span
-                  className="badge badge-category"
-                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', borderColor: '#cca969' }}
-                  onClick={() => setSelectedCategory('All')}
-                  title="Remove category filter"
-                >
-                  Category: {selectedCategory}
-                  <X size={12} />
-                </span>
-              )}
-              {selectedLevel !== 'All' && (
-                <span
-                  className="badge badge-category"
-                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', borderColor: '#cca969' }}
-                  onClick={() => setSelectedLevel('All')}
-                  title="Remove level filter"
-                >
-                  Level: {selectedLevel}
-                  <X size={12} />
-                </span>
-              )}
-              {searchQuery && (
-                <span
-                  className="badge badge-category"
-                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', borderColor: '#cca969' }}
-                  onClick={() => setSearchQuery('')}
-                  title="Clear search query"
-                >
-                  "{searchQuery}"
-                  <X size={12} />
-                </span>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Peer Results Grid */}
+      {/* Results */}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#9eb1c5', letterSpacing: '0.01em' }}>
+        <div style={{ marginBottom: '1rem' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#9eb1c5' }}>
             Found {filteredPeers.length} campus {filteredPeers.length === 1 ? 'match' : 'matches'}
           </span>
         </div>
 
-        {loading ? (
+        {!isAuthenticated ? (
+          <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
+            <h3 style={{ marginBottom: '0.5rem' }}>Log in to meet your campus peers</h3>
+            <p style={{ marginBottom: '1.25rem' }}>
+              Discover is only available to signed-in students. You can also try Demo Mode from the top bar.
+            </p>
+            <button type="button" className="btn btn-primary" onClick={onRequireLogin}>
+              Log in
+            </button>
+          </div>
+        ) : loading ? (
           <div className="card" style={{ padding: '3rem', textAlign: 'center', color: '#9eb1c5' }}>
             Searching campus peers...
+          </div>
+        ) : loadError ? (
+          <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+            <div className="alert alert-danger" style={{ justifyContent: 'center' }}>
+              <AlertCircle size={18} />
+              <span>{loadError}</span>
+            </div>
+            <button type="button" className="btn btn-outline btn-sm" onClick={fetchPeers}>
+              <RotateCcw size={14} />
+              Try again
+            </button>
           </div>
         ) : filteredPeers.length === 0 ? (
           <div
@@ -507,11 +383,9 @@ export function DiscoverView() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
               gap: '1rem',
               backgroundColor: '#192434',
               border: '1px solid rgba(204, 169, 105, 0.4)',
-              borderRadius: '16px',
             }}
           >
             <div style={{
@@ -524,47 +398,33 @@ export function DiscoverView() {
               alignItems: 'center',
               justifyContent: 'center',
               color: '#cca969',
-              boxShadow: '0 0 16px rgba(204, 169, 105, 0.2)',
             }}>
               <SearchX size={32} />
             </div>
-
             <div>
               <h3 style={{ fontSize: '1.4rem', marginBottom: '0.4rem', color: '#f5f0e6', fontFamily: 'var(--font-display)' }}>
-                No peers match your search criteria
+                {allPeers.length === 0 ? 'No peers here yet' : 'No peers match your search'}
               </h3>
               <p style={{ maxWidth: '480px', margin: '0 auto', color: '#9eb1c5', lineHeight: '1.6', fontSize: '0.925rem' }}>
-                We couldn't find any campus peers matching your current search query or filter selections. Try searching with different keywords or reset your filters.
+                {allPeers.length === 0
+                  ? 'No other students have listed skills of this type yet. Check back soon, or add your own skills so others can find you.'
+                  : 'Try different keywords or reset your filters.'}
               </p>
             </div>
-
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              style={{
-                marginTop: '0.5rem',
-                backgroundColor: '#cca969',
-                color: '#131a24',
-                fontWeight: 700,
-                padding: '0.6rem 1.4rem',
-                boxShadow: '0 4px 14px rgba(204, 169, 105, 0.25)',
-              }}
-              onClick={handleResetFilters}
-            >
-              <RotateCcw size={15} />
-              Reset Search & Filters
-            </button>
+            {hasActiveFilters && (
+              <button type="button" className="btn btn-primary btn-sm" onClick={handleResetFilters}>
+                <RotateCcw size={15} />
+                Reset search & filters
+              </button>
+            )}
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '1.35rem',
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.35rem' }}>
             {filteredPeers.map((item) => {
               const studentName = item.user?.first_name || item.user?.last_name
                 ? `${item.user?.first_name || ''} ${item.user?.last_name || ''}`.trim()
                 : (item.user?.username || 'Student');
+              const initial = (item.user?.first_name?.[0] || item.user?.username?.[0] || 'S').toUpperCase();
 
               return (
                 <div
@@ -578,27 +438,18 @@ export function DiscoverView() {
                     gap: '1rem',
                     backgroundColor: '#192434',
                     border: '1px solid rgba(204, 169, 105, 0.4)',
-                    borderRadius: '16px',
                   }}
                 >
                   <div>
-                    {/* Student Info Header */}
+                    {/* Student header */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}>
                       {item.user?.avatar_url ? (
                         <img
                           src={item.user.avatar_url}
                           alt={studentName}
-                          style={{
-                            width: '46px',
-                            height: '46px',
-                            borderRadius: 'var(--radius-full)',
-                            objectFit: 'cover',
-                            border: '2px solid #cca969',
-                            boxShadow: '0 0 10px rgba(204, 169, 105, 0.35)',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => handleOpenProfile(item)}
-                          title="Click to view full student profile"
+                          style={{ width: '46px', height: '46px', borderRadius: 'var(--radius-full)', objectFit: 'cover', border: '2px solid #cca969', cursor: 'pointer' }}
+                          onClick={() => setViewingPeer(item)}
+                          title="View full profile"
                         />
                       ) : (
                         <div
@@ -609,7 +460,6 @@ export function DiscoverView() {
                             backgroundColor: 'rgba(204, 169, 105, 0.15)',
                             color: '#cca969',
                             border: '2px solid #cca969',
-                            boxShadow: '0 0 10px rgba(204, 169, 105, 0.35)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -617,17 +467,14 @@ export function DiscoverView() {
                             fontSize: '1.15rem',
                             cursor: 'pointer',
                           }}
-                          onClick={() => handleOpenProfile(item)}
-                          title="Click to view full student profile"
+                          onClick={() => setViewingPeer(item)}
+                          title="View full profile"
                         >
-                          {(item.user?.first_name?.[0] || item.user?.username?.[0] || 'S').toUpperCase()}
+                          {initial}
                         </div>
                       )}
                       <div style={{ overflow: 'hidden' }}>
-                        <div
-                          style={{ fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', color: '#f5f0e6' }}
-                          onClick={() => handleOpenProfile(item)}
-                        >
+                        <div style={{ fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', color: '#f5f0e6' }} onClick={() => setViewingPeer(item)}>
                           {studentName}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: '#9eb1c5', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -639,24 +486,15 @@ export function DiscoverView() {
                       </div>
                     </div>
 
-                    {/* Skill Info */}
-                    <div style={{
-                      backgroundColor: '#131b26',
-                      borderRadius: '12px',
-                      padding: '0.85rem 1rem',
-                      marginBottom: '1rem',
-                      border: '1px solid rgba(204, 169, 105, 0.22)',
-                    }}>
+                    {/* Skill */}
+                    <div style={{ backgroundColor: '#131b26', borderRadius: '12px', padding: '0.85rem 1rem', marginBottom: '1rem', border: '1px solid rgba(204, 169, 105, 0.22)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f8fafc' }}>
-                          {item.skill?.name || 'Skill'}
-                        </div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f8fafc' }}>{item.skill?.name || 'Skill'}</div>
                         <LevelBadge level={item.level} />
                       </div>
                       <CategoryBadge category={item.skill?.category} />
                     </div>
 
-                    {/* Bio or Skill Notes */}
                     <p style={{
                       fontSize: '0.875rem',
                       lineHeight: '1.55',
@@ -669,32 +507,15 @@ export function DiscoverView() {
                   </div>
 
                   {/* Actions */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    borderTop: '1px solid rgba(204, 169, 105, 0.2)',
-                    paddingTop: '0.85rem',
-                  }}>
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm w-full"
-                      onClick={() => handleOpenProfile(item)}
-                    >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderTop: '1px solid rgba(204, 169, 105, 0.2)', paddingTop: '0.85rem' }}>
+                    <button type="button" className="btn btn-outline btn-sm w-full" onClick={() => setViewingPeer(item)}>
                       <User size={14} />
                       Profile
                     </button>
                     <button
                       type="button"
                       className="btn btn-connect btn-sm w-full"
-                      style={{
-                        backgroundColor: '#cca969',
-                        color: '#131a24',
-                        border: '1px solid #cca969',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(204, 169, 105, 0.25)',
-                      }}
+                      style={{ backgroundColor: '#cca969', color: '#131a24', border: '1px solid #cca969', fontWeight: 700, boxShadow: '0 2px 8px rgba(204, 169, 105, 0.25)' }}
                       onClick={() => handleConnect(item)}
                     >
                       <MessageSquare size={14} />
@@ -706,106 +527,53 @@ export function DiscoverView() {
             })}
           </div>
         )}
+
+        {/* Discover Pagination */}
+        {Math.ceil(totalCount / 20) > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginTop: '1.75rem' }}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft size={16} />
+              Previous
+            </button>
+            <span style={{ fontSize: '0.85rem', color: '#9eb1c5' }}>
+              Page {page} of {Math.ceil(totalCount / 20)}
+            </span>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={page >= Math.ceil(totalCount / 20)}
+              onClick={() => setPage((p) => Math.min(Math.ceil(totalCount / 20), p + 1))}
+            >
+              Next
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* User Profile Modal */}
-      {viewingProfileUser && (
+      {/* Profile modal: "Connect" starts a swap for the card that was opened. */}
+      {viewingPeer && (
         <UserProfileModal
-          isOpen={!!viewingProfileUser}
-          onClose={() => setViewingProfileUser(null)}
-          userId={viewingProfileUser.id}
-          fallbackUser={viewingProfileUser}
-          onConnect={(user) => {
-            const matchedPeer = peers.find((p) => p.user?.id === user.id) || { user, skill: user.primarySkill || { name: 'Skill Exchange' } };
-            handleConnect(matchedPeer);
-          }}
+          isOpen
+          onClose={() => setViewingPeer(null)}
+          userId={viewingPeer.user?.id}
+          fallbackUser={viewingPeer.user}
+          onConnect={() => handleConnect(viewingPeer)}
         />
       )}
 
-      {/* Connect / Swap Request Modal */}
+      {/* Swap request modal (calls POST /api/swaps/) */}
       {swapTargetPeer && (
-        <Modal
-          isOpen={!!swapTargetPeer}
+        <SwapRequestModal
+          isOpen
+          peer={swapTargetPeer}
           onClose={() => setSwapTargetPeer(null)}
-          title={`Connect with ${swapTargetPeer.user?.first_name || swapTargetPeer.user?.username}`}
-          footer={
-            swapSent ? (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setSwapTargetPeer(null)}
-              >
-                Done
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => setSwapTargetPeer(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => setSwapSent(true)}
-                >
-                  Send Peer Request
-                </button>
-              </>
-            )
-          }
-        >
-          {swapSent ? (
-            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: 'var(--success-subtle)',
-                color: 'var(--success-text)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1rem auto',
-              }}>
-                <Check size={24} />
-              </div>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Connection Request Queued!</h3>
-              <p>
-                Your swap request for <strong>{swapTargetPeer.skill?.name}</strong> has been created.
-                You can schedule a peer learning session once the peer accepts.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <p>
-                You are initiating a peer skill exchange with <strong>{swapTargetPeer.user?.first_name || swapTargetPeer.user?.username}</strong> regarding:
-              </p>
-              <div style={{
-                padding: '0.85rem 1rem',
-                backgroundColor: 'var(--bg-subtle)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-subtle)',
-              }}>
-                <div style={{ fontWeight: 700 }}>{swapTargetPeer.skill?.name}</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Level: {swapTargetPeer.level} • Role: {swapTargetPeer.skill_type === 'offer' ? 'Teaching Mentor' : 'Learning Partner'}
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="swap-message">Introductory Message</label>
-                <textarea
-                  id="swap-message"
-                  className="form-textarea"
-                  rows={3}
-                  defaultValue={`Hi ${swapTargetPeer.user?.first_name || 'there'}! I noticed your listing for ${swapTargetPeer.skill?.name} on SkillSync and would love to collaborate on a peer exchange.`}
-                />
-              </div>
-            </div>
-          )}
-        </Modal>
+        />
       )}
     </div>
   );

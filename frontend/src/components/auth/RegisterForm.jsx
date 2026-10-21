@@ -19,8 +19,28 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.password !== formData.password2) {
-      setError('Passwords do not match.');
+    const firstName = formData.first_name.trim();
+    const lastName = formData.last_name.trim();
+    const username = formData.username.trim();
+    const email = formData.email.trim().toLowerCase();
+
+    if (!firstName || !lastName) {
+      setError('Please provide both your first name and last name.');
+      return;
+    }
+
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters long.');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      setError('Username may only contain letters, numbers, underscores, and hyphens (no spaces).');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please provide a valid email address (e.g. name@campus.edu).');
       return;
     }
 
@@ -29,10 +49,22 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }) {
       return;
     }
 
+    if (formData.password !== formData.password2) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
-    const result = await register(formData);
+    const result = await register({
+      ...formData,
+      first_name: firstName,
+      last_name: lastName,
+      username,
+      email,
+      college: formData.college.trim(),
+    });
     setSubmitting(false);
 
     if (result.success) {
