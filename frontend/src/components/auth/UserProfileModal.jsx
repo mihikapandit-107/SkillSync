@@ -1,24 +1,55 @@
 import { useState, useEffect } from 'react';
-import { School, Calendar, MessageSquare, Sparkles, BookOpen } from 'lucide-react';
+import { School, Star, MessageSquare, Sparkles, BookOpen } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { authApi } from '../../api/auth';
 
+// Skills may arrive as objects ({ id, name }) or plain strings (demo data).
+const skillName = (s) => (typeof s === 'string' ? s : s?.name);
+
+function SkillChips({ skills, className, emptyText }) {
+  if (!skills.length) {
+    return <span style={{ fontSize: '0.85rem', color: '#6f8297' }}>{emptyText}</span>;
+  }
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+      {skills.map((skill, idx) => (
+        <span
+          key={skill?.id ?? idx}
+          className={`badge ${className}`}
+          style={{ textTransform: 'none', fontSize: '0.825rem', padding: '0.35rem 0.8rem', fontWeight: 600 }}
+        >
+          {skillName(skill)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Public profile of another student.
+ * Offered/wanted skills and rating come from GET /api/users/<id>/.
+ * While that loads (or if it fails) we show whatever the caller passed in
+ * `fallbackUser`, and an empty state for skills; no made-up skills.
+ */
 export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConnect }) {
-  const [profile, setProfile] = useState(fallbackUser || null);
+  const [profile, setProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !userId) return;
 
     let isMounted = true;
     const fetchUser = async () => {
+      setLoadingProfile(true);
       try {
         const data = await authApi.getUserDetail(userId);
         if (isMounted) setProfile(data);
       } catch (err) {
+        // Demo users (and offline mode) have no API profile; fallbackUser is enough.
         console.warn('Could not load public profile via API, using fallback data:', err);
-        if (isMounted && fallbackUser) {
-          setProfile(fallbackUser);
-        }
+        if (isMounted) setProfile(null);
+      } finally {
+        if (isMounted) setLoadingProfile(false);
       }
     };
 
@@ -26,23 +57,18 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConn
     return () => {
       isMounted = false;
     };
-  }, [isOpen, userId, fallbackUser]);
+  }, [isOpen, userId]);
 
   if (!isOpen) return null;
 
-  const currentProfile = profile || fallbackUser;
-  const displayName = currentProfile?.first_name || currentProfile?.last_name
-    ? `${currentProfile?.first_name || ''} ${currentProfile?.last_name || ''}`.trim()
-    : (currentProfile?.username || 'Student');
+  const current = profile || fallbackUser;
+  const displayName = current?.first_name || current?.last_name
+    ? `${current?.first_name || ''} ${current?.last_name || ''}`.trim()
+    : (current?.username || 'Student');
 
-  // Derive offered and wanted skills
-  const offeredSkills = currentProfile?.offered_skills || (currentProfile?.skills_offered
-    ? currentProfile.skills_offered.map((s) => (typeof s === 'string' ? s : s.name))
-    : ['UI/UX Design in Figma', 'Design Systems']);
-
-  const wantedSkills = currentProfile?.wanted_skills || (currentProfile?.skills_wanted
-    ? currentProfile.skills_wanted.map((s) => (typeof s === 'string' ? s : s.name))
-    : ['Conversational Japanese', 'Data Structures & Algorithms']);
+  const offeredSkills = current?.offered_skills || [];
+  const wantedSkills = current?.wanted_skills || [];
+  const hasRating = current?.review_count > 0 && current?.average_rating != null;
 
   return (
     <Modal
@@ -58,15 +84,10 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConn
             <button
               type="button"
               className="btn btn-connect btn-sm"
-              style={{
-                backgroundColor: '#cca969',
-                color: '#131a24',
-                border: '1px solid #cca969',
-                fontWeight: 700,
-              }}
+              style={{ backgroundColor: '#cca969', color: '#131a24', border: '1px solid #cca969', fontWeight: 700 }}
               onClick={() => {
                 onClose();
-                onConnect(currentProfile);
+                onConnect(current);
               }}
             >
               <MessageSquare size={14} />
@@ -77,11 +98,11 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConn
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        {/* Header Avatar and Info */}
+        {/* Header: avatar + name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {currentProfile?.avatar_url ? (
+          {current?.avatar_url ? (
             <img
-              src={currentProfile.avatar_url}
+              src={current.avatar_url}
               alt={displayName}
               style={{
                 width: '58px',
@@ -107,18 +128,16 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConn
               fontSize: '1.5rem',
               fontWeight: 800,
             }}>
-              {(currentProfile?.first_name?.[0] || currentProfile?.username?.[0] || 'S').toUpperCase()}
+              {(current?.first_name?.[0] || current?.username?.[0] || 'S').toUpperCase()}
             </div>
           )}
           <div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.2rem', color: '#f5f0e6' }}>{displayName}</h3>
-            <div style={{ fontSize: '0.85rem', color: '#9eb1c5' }}>
-              @{currentProfile?.username}
-            </div>
+            <div style={{ fontSize: '0.85rem', color: '#9eb1c5' }}>@{current?.username}</div>
           </div>
         </div>
 
-        {/* Academic / Campus Details */}
+        {/* College + rating */}
         <div style={{
           backgroundColor: '#131b26',
           borderRadius: 'var(--radius-md)',
@@ -130,31 +149,35 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConn
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem' }}>
             <School size={16} color="#cca969" />
-            <span style={{ fontWeight: 600, color: '#f5f0e6' }}>{currentProfile?.college || 'University Student'}</span>
+            <span style={{ fontWeight: 600, color: '#f5f0e6' }}>{current?.college || 'University Student'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: '#9eb1c5' }}>
-            <Calendar size={16} color="#cca969" />
-            <span>Active campus exchange peer</span>
+            <Star size={16} color="#cca969" />
+            <span>
+              {hasRating
+                ? `${current.average_rating} / 5 from ${current.review_count} ${current.review_count === 1 ? 'review' : 'reviews'}`
+                : 'No reviews yet'}
+            </span>
           </div>
         </div>
 
-        {/* About / Bio */}
+        {/* About */}
         <div>
           <h4 style={{ fontSize: '0.95rem', marginBottom: '0.5rem', color: '#f5f0e6' }}>About</h4>
           <p style={{
             fontSize: '0.9rem',
             lineHeight: '1.6',
-            color: currentProfile?.bio ? '#cbd5e1' : '#6f8297',
+            color: current?.bio ? '#cbd5e1' : '#6f8297',
             backgroundColor: '#131b26',
             padding: '0.85rem 1rem',
             borderRadius: 'var(--radius-md)',
             border: '1px solid rgba(204, 169, 105, 0.22)',
           }}>
-            {currentProfile?.bio || 'This student has not added a bio yet.'}
+            {current?.bio || 'This student has not added a bio yet.'}
           </p>
         </div>
 
-        {/* Skills Offered & Wanted Section */}
+        {/* Skills */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '0.25rem' }}>
           <div>
             <div style={{
@@ -168,19 +191,13 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConn
               letterSpacing: '0.03em',
               textTransform: 'uppercase',
             }}>
-              <Sparkles size={14} /> Skills Offered (Can Teach)
+              <Sparkles size={14} /> Can teach
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {offeredSkills.map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="badge badge-offer"
-                  style={{ textTransform: 'none', fontSize: '0.825rem', padding: '0.35rem 0.8rem', fontWeight: 600 }}
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
+            {loadingProfile && !offeredSkills.length ? (
+              <span style={{ fontSize: '0.85rem', color: '#6f8297' }}>Loading skills...</span>
+            ) : (
+              <SkillChips skills={offeredSkills} className="badge-offer" emptyText="No skills listed yet." />
+            )}
           </div>
 
           <div>
@@ -195,19 +212,13 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConn
               letterSpacing: '0.03em',
               textTransform: 'uppercase',
             }}>
-              <BookOpen size={14} /> Skills Wanted (Looking to Learn)
+              <BookOpen size={14} /> Wants to learn
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {wantedSkills.map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="badge badge-want"
-                  style={{ textTransform: 'none', fontSize: '0.825rem', padding: '0.35rem 0.8rem', fontWeight: 600 }}
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
+            {loadingProfile && !wantedSkills.length ? (
+              <span style={{ fontSize: '0.85rem', color: '#6f8297' }}>Loading skills...</span>
+            ) : (
+              <SkillChips skills={wantedSkills} className="badge-want" emptyText="No learning goals listed yet." />
+            )}
           </div>
         </div>
       </div>

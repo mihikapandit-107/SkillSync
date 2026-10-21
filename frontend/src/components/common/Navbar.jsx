@@ -1,8 +1,20 @@
-import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus, Shield } from 'lucide-react';
+import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus, Shield, ArrowLeftRight, CalendarDays, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
+import { NotificationsDropdown } from '../notifications/NotificationsDropdown';
 
 export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, onOpenProfile }) {
   const { user, isAuthenticated, logout, enableDemoMode, isDemoMode } = useAuth();
+
+  const isStaff = !!(user?.is_staff || user?.is_superuser);
+  const tabs = [
+    { id: 'discover', label: 'Discover Peers', icon: Compass, show: true },
+    { id: 'matches', label: 'Matches', icon: Sparkles, show: isAuthenticated },
+    { id: 'catalog', label: 'Skill Catalog', icon: Layers, show: true },
+    { id: 'myskills', label: 'My Skills', icon: BookOpen, show: isAuthenticated },
+    { id: 'swaps', label: 'Swaps', icon: ArrowLeftRight, show: isAuthenticated },
+    { id: 'sessions', label: 'Sessions', icon: CalendarDays, show: isAuthenticated },
+    { id: 'admin', label: 'Admin', icon: Shield, show: isAuthenticated && isStaff },
+  ].filter((t) => t.show);
 
   return (
     <header style={{
@@ -67,73 +79,27 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
 
         {/* Navigation Tabs */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <button
-            type="button"
-            className="btn"
-            style={{
-              padding: '0.45rem 1.15rem',
-              backgroundColor: activeTab === 'discover' ? '#1c2838' : 'transparent',
-              color: activeTab === 'discover' ? '#f5edd8' : '#9eb1c5',
-              border: activeTab === 'discover' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
-              boxShadow: activeTab === 'discover' ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
-            }}
-            onClick={() => setActiveTab('discover')}
-          >
-            <Compass size={15} color={activeTab === 'discover' ? '#cca969' : '#9eb1c5'} />
-            Discover Peers
-          </button>
-
-          <button
-            type="button"
-            className="btn"
-            style={{
-              padding: '0.45rem 1.15rem',
-              backgroundColor: activeTab === 'catalog' ? '#1c2838' : 'transparent',
-              color: activeTab === 'catalog' ? '#f5edd8' : '#9eb1c5',
-              border: activeTab === 'catalog' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
-              boxShadow: activeTab === 'catalog' ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
-            }}
-            onClick={() => setActiveTab('catalog')}
-          >
-            <Layers size={15} color={activeTab === 'catalog' ? '#cca969' : '#9eb1c5'} />
-            Skill Catalog
-          </button>
-
-          {isAuthenticated && (
-            <button
-              type="button"
-              className="btn"
-              style={{
-                padding: '0.45rem 1.15rem',
-                backgroundColor: activeTab === 'myskills' ? '#1c2838' : 'transparent',
-                color: activeTab === 'myskills' ? '#f5edd8' : '#9eb1c5',
-                border: activeTab === 'myskills' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
-                boxShadow: activeTab === 'myskills' ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
-              }}
-              onClick={() => setActiveTab('myskills')}
-            >
-              <BookOpen size={15} color={activeTab === 'myskills' ? '#cca969' : '#9eb1c5'} />
-              My Skills
-            </button>
-          )}
-
-          {isAuthenticated && (user?.is_staff || user?.is_superuser) && (
-            <button
-              type="button"
-              className="btn"
-              style={{
-                padding: '0.45rem 1.15rem',
-                backgroundColor: activeTab === 'admin' ? '#1c2838' : 'transparent',
-                color: activeTab === 'admin' ? '#f5edd8' : '#9eb1c5',
-                border: activeTab === 'admin' ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
-                boxShadow: activeTab === 'admin' ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
-              }}
-              onClick={() => setActiveTab('admin')}
-            >
-              <Shield size={15} color={activeTab === 'admin' ? '#cca969' : '#9eb1c5'} />
-              Admin
-            </button>
-          )}
+          {tabs.map(({ id, label, icon: Icon }) => {
+            const active = activeTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                className="btn"
+                style={{
+                  padding: '0.45rem 1.15rem',
+                  backgroundColor: active ? '#1c2838' : 'transparent',
+                  color: active ? '#f5edd8' : '#9eb1c5',
+                  border: active ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.3)',
+                  boxShadow: active ? '0 0 12px rgba(204, 169, 105, 0.25)' : 'none',
+                }}
+                onClick={() => setActiveTab(id)}
+              >
+                <Icon size={15} color={active ? '#cca969' : '#9eb1c5'} />
+                {label}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Auth / Profile Actions */}
@@ -146,6 +112,8 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
                 </span>
               )}
 
+              <NotificationsDropdown onNavigate={setActiveTab} />
+
               <button
                 type="button"
                 className="btn btn-outline"
@@ -153,21 +121,35 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
                 onClick={onOpenProfile}
                 title="View & Edit Profile"
               >
-                <div style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: 'rgba(204, 169, 105, 0.2)',
-                  color: 'var(--primary)',
-                  border: '1px solid var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                }}>
-                  {user?.first_name ? user.first_name[0].toUpperCase() : (user?.username ? user.username[0].toUpperCase() : 'U')}
-                </div>
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user?.first_name || user?.username}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: 'var(--radius-full)',
+                      objectFit: 'cover',
+                      border: '1px solid var(--primary)',
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: 'rgba(204, 169, 105, 0.2)',
+                    color: 'var(--primary)',
+                    border: '1px solid var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                  }}>
+                    {user?.first_name ? user.first_name[0].toUpperCase() : (user?.username ? user.username[0].toUpperCase() : 'U')}
+                  </div>
+                )}
                 <span>{user?.first_name || user?.username}</span>
               </button>
 

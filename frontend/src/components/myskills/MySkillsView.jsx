@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, BookOpen, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit2, Trash2, BookOpen, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
 import { LevelBadge, SkillTypeBadge } from '../common/Badge';
 import { AddUserSkillModal } from './AddUserSkillModal';
@@ -41,41 +41,46 @@ export function MySkillsView() {
   const [activeTab, setActiveTab] = useState('offer'); // 'offer' | 'want'
   const [userSkills, setUserSkills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      if (!isAuthenticated) {
-        setLoading(false);
-        return;
-      }
-      if (isDemoMode) {
-        if (isMounted) {
-          setUserSkills(DEMO_MY_SKILLS);
-          setLoading(false);
-        }
-        return;
-      }
-      try {
-        const data = await skillsApi.getMySkills();
-        const results = Array.isArray(data) ? data : (data?.results || []);
-        if (isMounted) setUserSkills(results);
-      } catch (err) {
-        console.warn('Could not fetch user skills via API, using sample data:', err);
-        if (isMounted) setUserSkills(DEMO_MY_SKILLS);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
+  const load = useCallback(async () => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
 
-    load();
-    return () => {
-      isMounted = false;
-    };
+    setLoadError(null);
+
+    if (isDemoMode) {
+      setUserSkills(DEMO_MY_SKILLS);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await skillsApi.getMySkills();
+      setUserSkills(Array.isArray(data) ? data : (data?.results || []));
+    } catch (err) {
+      // Real accounts see a real error, never made-up skills.
+      setUserSkills([]);
+      setLoadError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
   }, [isAuthenticated, isDemoMode]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const openAddModal = () => {
+    setEditingSkill(null);
+    setIsModalOpen(true);
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to remove this skill from your profile?')) {
@@ -113,41 +118,35 @@ export function MySkillsView() {
     return (
       <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
         <h3 style={{ marginBottom: '0.5rem' }}>Student Login Required</h3>
-        <p style={{ marginBottom: '1.5rem' }}>
-          Log in or create a student account to manage skills you teach and skills you want to learn.
-        </p>
+        <p>Log in or create a student account to manage skills you teach and skills you want to learn.</p>
       </div>
     );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Header Banner */}
+      {/* Header */}
       <div className="card" style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
             <BookOpen size={20} color="var(--primary)" />
             <h2 style={{ fontSize: '1.75rem' }}>My Personal Skills</h2>
           </div>
-          <p>
-            Manage what you can teach peers and what skills you are eager to learn in exchange.
-          </p>
+          <p>Manage what you can teach peers and what skills you are eager to learn in exchange.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              setEditingSkill(null);
-              setIsModalOpen(true);
-            }}
-          >
-            <Plus size={16} />
-            Add {activeTab === 'offer' ? 'Offered' : 'Wanted'} Skill
-          </button>
-        </div>
+        <button type="button" className="btn btn-primary" onClick={openAddModal}>
+          <Plus size={16} />
+          Add {activeTab === 'offer' ? 'Offered' : 'Wanted'} Skill
+        </button>
       </div>
+
+      {isDemoMode && (
+        <div className="alert alert-info">
+          <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+          <span>Demo mode is active. You can add, edit, or remove skills in this preview session.</span>
+        </div>
+      )}
 
       {feedbackMessage && (
         <div className={`alert ${feedbackMessage.type === 'success' ? 'alert-success' : 'alert-danger'}`}>
@@ -203,10 +202,21 @@ export function MySkillsView() {
         </button>
       </div>
 
-      {/* Content List */}
+      {/* Content */}
       {loading ? (
         <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
           Loading your skills...
+        </div>
+      ) : loadError ? (
+        <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+          <div className="alert alert-danger" style={{ justifyContent: 'center' }}>
+            <AlertCircle size={18} />
+            <span>{loadError}</span>
+          </div>
+          <button type="button" className="btn btn-outline btn-sm" onClick={load}>
+            <RotateCcw size={14} />
+            Try again
+          </button>
         </div>
       ) : currentSkills.length === 0 ? (
         <div className="card" style={{ padding: '3.5rem', textAlign: 'center' }}>
@@ -217,17 +227,10 @@ export function MySkillsView() {
           </h3>
           <p style={{ maxWidth: '480px', margin: '0 auto 1.5rem auto' }}>
             {activeTab === 'offer'
-              ? 'Share your strengths, programming languages, instruments, or coursework to match with peers.'
+              ? 'Share your strengths, programming languages, instruments, or coursework to match with peers. You need at least one to send swap requests.'
               : 'Add topics you want tutoring or study partnerships in.'}
           </p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              setEditingSkill(null);
-              setIsModalOpen(true);
-            }}
-          >
+          <button type="button" className="btn btn-primary" onClick={openAddModal}>
             <Plus size={16} />
             Add First {activeTab === 'offer' ? 'Teaching Skill' : 'Learning Goal'}
           </button>
@@ -262,15 +265,9 @@ export function MySkillsView() {
                 </p>
               </div>
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                paddingTop: '0.75rem',
-                borderTop: '1px solid var(--border-subtle)',
-              }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Added {userSkill.created_at ? new Date(userSkill.created_at).toLocaleDateString() : 'Recently'}
+                  Added {userSkill.created_at ? new Date(userSkill.created_at).toLocaleDateString() : 'recently'}
                 </span>
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -285,11 +282,7 @@ export function MySkillsView() {
                     <Edit2 size={13} />
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleDelete(userSkill.id)}
-                  >
+                  <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDelete(userSkill.id)}>
                     <Trash2 size={13} />
                     Remove
                   </button>

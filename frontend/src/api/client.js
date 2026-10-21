@@ -38,6 +38,7 @@ export const tokenStorage = {
     localStorage.removeItem('skillsync_access_token');
     localStorage.removeItem('skillsync_refresh_token');
     localStorage.removeItem('skillsync_demo_user');
+    localStorage.removeItem('skillsync_demo_active');
   },
 };
 

@@ -43,4 +43,10 @@ export const authApi = {
       requiresAuth: true,
     });
   },
+
+  async getUserSkills(userId) {
+    return await apiClient(`/users/${userId}/skills/`, {
+      method: 'GET',
+    });
+  },
 };

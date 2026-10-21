@@ -60,14 +60,14 @@ export function LoginForm({ onSuccess, onSwitchToRegister }) {
       )}
 
       <div className="form-group">
-        <label className="form-label" htmlFor="login-username">Username</label>
+        <label className="form-label" htmlFor="login-username">Username or Student Email</label>
         <div style={{ position: 'relative' }}>
           <input
             id="login-username"
             type="text"
             className="form-input"
             style={{ paddingLeft: '2.5rem' }}
-            placeholder="e.g. alex_student"
+            placeholder="e.g. alex_student or alex@campus.edu"
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             autoComplete="username"

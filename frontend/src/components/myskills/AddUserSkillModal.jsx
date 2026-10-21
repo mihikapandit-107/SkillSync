@@ -3,6 +3,16 @@ import { PlusCircle, AlertCircle, Save } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { skillsApi } from '../../api/skills';
 import { formatApiError } from '../../api/client';
+import { useAuth } from '../../context/useAuth';
+
+const DEMO_CATALOG_SKILLS = [
+  { id: 101, name: 'Python Programming', category: 'Programming' },
+  { id: 102, name: 'React & Frontend', category: 'Programming' },
+  { id: 103, name: 'Data Structures & Algorithms', category: 'Programming' },
+  { id: 104, name: 'UI/UX Design in Figma', category: 'Design & UI/UX' },
+  { id: 106, name: 'Conversational Spanish', category: 'Languages' },
+  { id: 110, name: 'Acoustic Guitar Basics', category: 'Music & Audio' },
+];
 
 export function AddUserSkillModal({
   isOpen,
@@ -12,6 +22,7 @@ export function AddUserSkillModal({
   initialType = 'offer',
   editingUserSkill = null,
 }) {
+  const { isDemoMode } = useAuth();
   const [catalogSkills, setCatalogSkills] = useState([]);
   const [selectedSkillId, setSelectedSkillId] = useState('');
   const [skillType, setSkillType] = useState('offer');
@@ -20,8 +31,16 @@ export function AddUserSkillModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  const isEditing = !!editingUserSkill;
+
+  // Load the catalog each time the modal opens.
   useEffect(() => {
     if (!isOpen) return;
+
+    if (isDemoMode) {
+      setCatalogSkills(DEMO_CATALOG_SKILLS);
+      return;
+    }
 
     let isMounted = true;
     const loadCatalog = async () => {
@@ -38,28 +57,27 @@ export function AddUserSkillModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen]);
+  }, [isOpen, isDemoMode]);
 
-  // Handle form reset when opening
-  const isEditing = !!editingUserSkill;
+  // Reset the form every time the modal opens (or its inputs change).
+  // This replaces the old onFocus-based init, which never ran when the
+  // dialog itself received focus, leaving selectedSkillId empty on save.
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const handleOpenInit = () => {
     if (editingUserSkill) {
-      if (selectedSkillId !== editingUserSkill.skill) {
-        setSelectedSkillId(editingUserSkill.skill);
-        setSkillType(editingUserSkill.skill_type);
-        setLevel(editingUserSkill.level || 'intermediate');
-        setDescription(editingUserSkill.description || '');
-      }
-    } else if (initialSkill) {
-      if (selectedSkillId !== initialSkill.id) {
-        setSelectedSkillId(initialSkill.id);
-        setSkillType(initialType);
-        setLevel(initialType === 'offer' ? 'intermediate' : 'beginner');
-        setDescription('');
-      }
+      setSelectedSkillId(editingUserSkill.skill);
+      setSkillType(editingUserSkill.skill_type);
+      setLevel(editingUserSkill.level || 'intermediate');
+      setDescription(editingUserSkill.description || '');
+    } else {
+      setSelectedSkillId(initialSkill?.id ?? '');
+      setSkillType(initialType);
+      setLevel(initialType === 'offer' ? 'intermediate' : 'beginner');
+      setDescription('');
     }
-  };
+    setError(null);
+  }, [isOpen, editingUserSkill, initialSkill, initialType]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,6 +88,23 @@ export function AddUserSkillModal({
 
     setSubmitting(true);
     setError(null);
+
+    if (isDemoMode) {
+      const selectedSkill = catalogSkills.find((s) => s.id === Number(selectedSkillId)) || initialSkill;
+      const simulatedSkill = {
+        id: editingUserSkill ? editingUserSkill.id : Date.now(),
+        skill: Number(selectedSkillId),
+        skill_name: selectedSkill?.name || 'Skill',
+        skill_type: skillType,
+        level,
+        description: description.trim(),
+        created_at: editingUserSkill?.created_at || new Date().toISOString(),
+      };
+      onSuccess?.(simulatedSkill, isEditing ? 'update' : 'create');
+      setSubmitting(false);
+      onClose();
+      return;
+    }
 
     try {
       if (editingUserSkill) {
@@ -119,7 +154,7 @@ export function AddUserSkillModal({
         </>
       }
     >
-      <form onSubmit={handleSubmit} onFocus={handleOpenInit}>
+      <form onSubmit={handleSubmit}>
         {error && (
           <div className="alert alert-danger" role="alert">
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -165,7 +200,7 @@ export function AddUserSkillModal({
             <select
               id="user-skill-select"
               className="form-select"
-              value={selectedSkillId || initialSkill?.id || ''}
+              value={selectedSkillId}
               onChange={(e) => setSelectedSkillId(e.target.value)}
               required
             >

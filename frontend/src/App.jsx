@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import { Navbar } from './components/common/Navbar';
@@ -12,10 +12,17 @@ import { MySkillsView } from './components/myskills/MySkillsView';
 import { ProfileView } from './components/profile/ProfileView';
 import { AddUserSkillModal } from './components/myskills/AddUserSkillModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { SwapsView } from './components/swaps/SwapsView';
+import { SessionsView } from './components/sessions/SessionsView';
+import { MatchesView } from './components/matching/MatchesView';
+
+// Tabs that need a logged-in user.
+const LOGIN_ONLY_TABS = ['myskills', 'matches', 'swaps', 'sessions', 'profile', 'admin'];
 
 function MainLayout() {
-  const { isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState('discover'); // 'discover' | 'catalog' | 'myskills' | 'profile'
+  const { user, isAuthenticated } = useAuth();
+  // 'discover' | 'matches' | 'catalog' | 'myskills' | 'swaps' | 'sessions' | 'profile' | 'admin'
+  const [requestedTab, setActiveTab] = useState('discover');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
@@ -23,6 +30,21 @@ function MainLayout() {
   const [selectedCatalogSkill, setSelectedCatalogSkill] = useState(null);
   const [selectedSkillType, setSelectedSkillType] = useState('offer');
   const [isAddUserSkillOpen, setIsAddUserSkillOpen] = useState(false);
+
+  const isStaff = !!(user?.is_staff || user?.is_superuser);
+
+  // Reset tab when authentication changes or if user lacks permissions
+  useEffect(() => {
+    if (!isAuthenticated && LOGIN_ONLY_TABS.includes(requestedTab)) {
+      setActiveTab('discover');
+    } else if (requestedTab === 'admin' && !isStaff) {
+      setActiveTab('discover');
+    }
+  }, [isAuthenticated, isStaff, requestedTab]);
+
+  let activeTab = requestedTab;
+  if (!isAuthenticated && LOGIN_ONLY_TABS.includes(requestedTab)) activeTab = 'discover';
+  if (requestedTab === 'admin' && !isStaff) activeTab = 'discover';
 
   const handleSelectSkillForUser = (skill, type) => {
     if (!isAuthenticated) {
@@ -50,7 +72,14 @@ function MainLayout() {
 
       <main style={{ flex: 1, padding: '2rem 0 4.5rem 0' }}>
         <div className="container">
-          {activeTab === 'discover' && <DiscoverView />}
+          {activeTab === 'discover' && <DiscoverView onRequireLogin={() => setIsLoginOpen(true)} />}
+
+          {activeTab === 'matches' && (
+            <MatchesView
+              onOpenMySkills={() => setActiveTab('myskills')}
+              onRequireLogin={() => setIsLoginOpen(true)}
+            />
+          )}
 
           {activeTab === 'catalog' && (
             <SkillCatalog onSelectSkillForUser={handleSelectSkillForUser} />
@@ -60,6 +89,8 @@ function MainLayout() {
             <MySkillsView onOpenCatalog={() => setActiveTab('catalog')} />
           )}
 
+          {activeTab === 'swaps' && <SwapsView onOpenSessions={() => setActiveTab('sessions')} />}
+          {activeTab === 'sessions' && <SessionsView />}
           {activeTab === 'profile' && <ProfileView />}
           {activeTab === 'admin' && <AdminDashboard />}
         </div>
