@@ -1,6 +1,7 @@
-from rest_framework import generics, filters
+from rest_framework import filters, generics
+from rest_framework.exceptions import ValidationError
 from .models import Skill, UserSkill
-from .serializers import SkillSerializer, UserSkillSerializer, DiscoverSerializer
+from .serializers import DiscoverSerializer, SkillSerializer, UserSkillSerializer
 
 
 class SkillListCreateView(generics.ListCreateAPIView):
@@ -50,12 +51,29 @@ class DiscoverView(generics.ListAPIView):
     Browse other students' skills.
     Query params: ?type=offer|want (default offer), ?skill=<id>, ?q=<name>,
                   ?category=<cat>, ?level=<level>
+    Invalid values return 400 instead of crashing.
     """
     serializer_class = DiscoverSerializer
 
     def get_queryset(self):
         params = self.request.query_params
-        skill_type = params.get("type", "offer")
+
+        skill_type = params.get("type") or UserSkill.SkillType.OFFER
+        if skill_type not in UserSkill.SkillType.values:
+            raise ValidationError({"type": ["Must be 'offer' or 'want'."]})
+
+        level = params.get("level")
+        if level and level not in UserSkill.Level.values:
+            raise ValidationError(
+                {"level": [f"Must be one of: {', '.join(UserSkill.Level.values)}."]}
+            )
+
+        skill_id = None
+        if params.get("skill"):
+            try:
+                skill_id = int(params["skill"])
+            except ValueError:
+                raise ValidationError({"skill": ["Must be an integer skill id."]})
 
         qs = (
             UserSkill.objects
@@ -63,12 +81,12 @@ class DiscoverView(generics.ListAPIView):
             .exclude(user=self.request.user)
             .select_related("user", "skill")
         )
-        if params.get("skill"):
-            qs = qs.filter(skill_id=params["skill"])
+        if skill_id is not None:
+            qs = qs.filter(skill_id=skill_id)
         if params.get("q"):
             qs = qs.filter(skill__name__icontains=params["q"])
         if params.get("category"):
             qs = qs.filter(skill__category__iexact=params["category"])
-        if params.get("level"):
-            qs = qs.filter(level=params["level"])
+        if level:
+            qs = qs.filter(level=level)
         return qs

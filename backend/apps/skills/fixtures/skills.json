@@ -1,0 +1,191 @@
+﻿[
+{
+  "model": "skills.skill",
+  "pk": 1,
+  "fields": {
+    "name": "Python",
+    "category": "Programming",
+    "created_at": "2026-10-14T08:15:30.817Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 2,
+  "fields": {
+    "name": "Python Programming",
+    "category": "Programming",
+    "created_at": "2026-10-20T22:04:36.516Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 3,
+  "fields": {
+    "name": "React & Frontend",
+    "category": "Programming",
+    "created_at": "2026-10-20T22:04:36.536Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 4,
+  "fields": {
+    "name": "Data Structures & Algorithms",
+    "category": "Programming",
+    "created_at": "2026-10-20T22:04:36.553Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 5,
+  "fields": {
+    "name": "Django & REST APIs",
+    "category": "Programming",
+    "created_at": "2026-10-20T22:04:36.569Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 6,
+  "fields": {
+    "name": "SQL & Databases",
+    "category": "Programming",
+    "created_at": "2026-10-20T22:04:36.588Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 7,
+  "fields": {
+    "name": "Git & GitHub",
+    "category": "Programming",
+    "created_at": "2026-10-20T22:04:36.608Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 8,
+  "fields": {
+    "name": "UI/UX Design in Figma",
+    "category": "Design & UI/UX",
+    "created_at": "2026-10-20T22:04:36.635Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 9,
+  "fields": {
+    "name": "Graphic Design & Branding",
+    "category": "Design & UI/UX",
+    "created_at": "2026-10-20T22:04:36.654Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 10,
+  "fields": {
+    "name": "Digital Photography & Editing",
+    "category": "Design & UI/UX",
+    "created_at": "2026-10-20T22:04:36.673Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 11,
+  "fields": {
+    "name": "Video Editing & Color Grading",
+    "category": "Design & UI/UX",
+    "created_at": "2026-10-20T22:04:36.693Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 12,
+  "fields": {
+    "name": "Conversational Spanish",
+    "category": "Languages",
+    "created_at": "2026-10-20T22:04:36.713Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 13,
+  "fields": {
+    "name": "Japanese for Beginners",
+    "category": "Languages",
+    "created_at": "2026-10-20T22:04:36.736Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 14,
+  "fields": {
+    "name": "Conversational Hindi",
+    "category": "Languages",
+    "created_at": "2026-10-20T22:04:36.753Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 15,
+  "fields": {
+    "name": "Calculus & Linear Algebra",
+    "category": "Academics & STEM",
+    "created_at": "2026-10-20T22:04:36.773Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 16,
+  "fields": {
+    "name": "Organic Chemistry",
+    "category": "Academics & STEM",
+    "created_at": "2026-10-20T22:04:36.792Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 17,
+  "fields": {
+    "name": "Statistics & Probability",
+    "category": "Academics & STEM",
+    "created_at": "2026-10-20T22:04:36.808Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 18,
+  "fields": {
+    "name": "Acoustic Guitar Basics",
+    "category": "Music & Audio",
+    "created_at": "2026-10-20T22:04:36.825Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 19,
+  "fields": {
+    "name": "Music Production",
+    "category": "Music & Audio",
+    "created_at": "2026-10-20T22:04:36.842Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 20,
+  "fields": {
+    "name": "Public Speaking & Presentations",
+    "category": "Writing & Communication",
+    "created_at": "2026-10-20T22:04:36.860Z"
+  }
+},
+{
+  "model": "skills.skill",
+  "pk": 21,
+  "fields": {
+    "name": "Resume & Interview Prep",
+    "category": "Writing & Communication",
+    "created_at": "2026-10-20T22:04:36.879Z"
+  }
+}
+]
