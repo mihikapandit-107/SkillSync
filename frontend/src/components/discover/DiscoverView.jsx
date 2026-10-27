@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Bookmark,
   BookmarkCheck,
+  ThumbsUp,
 } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
 import { savedPeersApi } from '../../api/auth';
@@ -169,6 +170,53 @@ export function DiscoverView({ onRequireLogin }) {
       alert(formatApiError(err));
     } finally {
       setBookmarkingId(null);
+    }
+  };
+
+  const handleToggleEndorse = async (item) => {
+    if (!isAuthenticated) {
+      onRequireLogin?.();
+      return;
+    }
+    const currentlyEndorsed = !!item.is_endorsed;
+    const currentCount = item.endorsements_count || 0;
+
+    // Optimistically update
+    setAllPeers((prev) =>
+      prev.map((p) => {
+        if (p.id === item.id) {
+          return {
+            ...p,
+            is_endorsed: !currentlyEndorsed,
+            endorsements_count: currentlyEndorsed ? Math.max(0, currentCount - 1) : currentCount + 1,
+          };
+        }
+        return p;
+      })
+    );
+
+    if (!isDemoMode) {
+      try {
+        const res = await skillsApi.toggleEndorsement(item.id);
+        setAllPeers((prev) =>
+          prev.map((p) => {
+            if (p.id === item.id) {
+              return {
+                ...p,
+                is_endorsed: res.endorsed,
+                endorsements_count: res.endorsements_count,
+              };
+            }
+            return p;
+          })
+        );
+      } catch (err) {
+        // Rollback
+        setAllPeers((prev) =>
+          prev.map((p) => (p.id === item.id ? { ...p, is_endorsed: currentlyEndorsed, endorsements_count: currentCount } : p))
+        );
+        alert(formatApiError(err));
+      }
     }
   };
 
@@ -607,7 +655,33 @@ export function DiscoverView({ onRequireLogin }) {
                         <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f8fafc' }}>{item.skill?.name || 'Skill'}</div>
                         <LevelBadge level={item.level} />
                       </div>
-                      <CategoryBadge category={item.skill?.category} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
+                        <CategoryBadge category={item.skill?.category} />
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          style={{
+                            padding: '2px 8px',
+                            fontSize: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: item.is_endorsed ? 'rgba(204, 169, 105, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                            color: item.is_endorsed ? '#cca969' : '#94a3b8',
+                            border: item.is_endorsed ? '1px solid #cca969' : '1px solid rgba(255, 255, 255, 0.1)',
+                            cursor: 'pointer',
+                          }}
+                          title={item.is_endorsed ? 'Click to remove endorsement' : 'Endorse this skill'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleEndorse(item);
+                          }}
+                        >
+                          <ThumbsUp size={12} fill={item.is_endorsed ? '#cca969' : 'none'} />
+                          <span>{item.endorsements_count || 0}</span>
+                        </button>
+                      </div>
                     </div>
 
                     <p style={{
