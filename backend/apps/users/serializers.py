@@ -4,7 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.db.models import Avg, Count
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User
+from .models import User, SavedPeer
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
@@ -168,3 +168,30 @@ class PublicProfileSerializer(RatingFieldsMixin, SkillListsMixin, PublicUserSeri
         fields = PublicUserSerializer.Meta.fields + (
             "average_rating", "review_count", "offered_skills", "wanted_skills",
         )
+
+
+class SavedPeerSerializer(serializers.ModelSerializer):
+    peer_detail = PublicProfileSerializer(source="peer", read_only=True)
+    peer_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(is_active=True), source="peer", write_only=True
+    )
+
+    class Meta:
+        model = SavedPeer
+        fields = ("id", "peer_id", "peer_detail", "note", "created_at")
+        read_only_fields = ("id", "created_at")
+
+    def validate_peer(self, peer):
+        request = self.context.get("request")
+        if request and request.user == peer:
+            raise serializers.ValidationError("You cannot bookmark your own profile.")
+        return peer
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+        peer = validated_data["peer"]
+        note = validated_data.get("note", "")
+        saved, _ = SavedPeer.objects.update_or_create(
+            user=user, peer=peer, defaults={"note": note}
+        )
+        return saved
