@@ -3,6 +3,7 @@ import { User, School, Mail, Edit3, Save, X, CheckCircle, AlertCircle, Star } fr
 import { useAuth } from '../../context/useAuth';
 import { skillsApi } from '../../api/skills';
 import { reviewsApi } from '../../api/review';
+import { AvailabilityManager } from '../availability/AvailabilityManager';
 
 export function ProfileView({ offeredCount, wantedCount }) {
   const { user, updateProfile } = useAuth();
@@ -424,6 +425,9 @@ export function ProfileView({ offeredCount, wantedCount }) {
           </div>
         )}
       </div>
+
+      {/* Weekly Availability Slots */}
+      <AvailabilityManager />
     </div>
   );
 }

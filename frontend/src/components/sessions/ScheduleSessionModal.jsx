@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { CalendarPlus, Save, AlertCircle } from 'lucide-react';
+import { CalendarPlus, Save, AlertCircle, Sparkles, Clock } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { sessionsApi } from '../../api/sessions';
+import { availabilityApi } from '../../api/availability';
+import { useAuth } from '../../context/useAuth';
 import { formatApiError } from '../../api/client';
 
 // <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" in the user's local time.
@@ -22,6 +24,7 @@ function defaultStart() {
 }
 
 export function ScheduleSessionModal({ isOpen, onClose, swap, session = null, onSaved }) {
+  const { user } = useAuth();
   const isEditing = !!session;
 
   const [startsAt, setStartsAt] = useState('');
@@ -31,6 +34,38 @@ export function ScheduleSessionModal({ isOpen, onClose, swap, session = null, on
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [commonWindows, setCommonWindows] = useState([]);
+
+  // Fetch common availability windows with the swap partner
+  useEffect(() => {
+    if (!isOpen || !swap) return;
+    const partnerId = swap.requester_detail?.id === user?.id
+      ? (swap.receiver_detail?.id || swap.receiver)
+      : (swap.requester_detail?.id || swap.requester);
+
+    if (partnerId) {
+      availabilityApi.getCommonWindows(partnerId).then((res) => {
+        setCommonWindows(res?.windows || []);
+      }).catch(() => {
+        setCommonWindows([]);
+      });
+    }
+  }, [isOpen, swap, user]);
+
+  // Apply a suggested mutual free window
+  const applySuggestedWindow = (win) => {
+    // Find next upcoming date for win.weekday (0=Monday ... 6=Sunday)
+    const targetDay = (win.weekday + 1) % 7; // JS 0=Sunday, Python 0=Monday
+    const d = new Date();
+    d.setDate(d.getDate() + 1); // start tomorrow minimum
+    while (d.getDay() !== targetDay) {
+      d.setDate(d.getDate() + 1);
+    }
+    const [hh, mm] = win.start_time.split(':');
+    d.setHours(Number(hh), Number(mm), 0, 0);
+    setStartsAt(toLocalInput(d));
+    setDuration(Math.min(60, win.minutes));
+  };
 
   // Reset the form each time the modal opens.
   useEffect(() => {
@@ -111,6 +146,30 @@ export function ScheduleSessionModal({ isOpen, onClose, swap, session = null, on
           <div className="alert alert-danger" role="alert">
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
             <div style={{ whiteSpace: 'pre-line' }}>{error}</div>
+          </div>
+        )}
+
+        {/* Mutual Availability Suggestion Chips */}
+        {commonWindows.length > 0 && !isEditing && (
+          <div style={{ marginBottom: '1.25rem', padding: '0.85rem', backgroundColor: 'rgba(204, 169, 105, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.825rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '0.5rem' }}>
+              <Sparkles size={14} />
+              Suggested Mutual Free Times (Click to set):
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {commonWindows.slice(0, 4).map((w, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.55rem', display: 'flex', alignItems: 'center', gap: '0.35rem', backgroundColor: 'var(--bg-surface)' }}
+                  onClick={() => applySuggestedWindow(w)}
+                >
+                  <Clock size={12} color="var(--primary)" />
+                  {w.weekday_label} {w.start_time} - {w.end_time}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
