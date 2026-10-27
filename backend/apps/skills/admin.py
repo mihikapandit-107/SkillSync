@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import Count, Q
-from .models import Skill, UserSkill
+from .models import Skill, UserSkill, SkillEndorsement
 
 
 @admin.register(Skill)
@@ -36,3 +36,12 @@ class UserSkillAdmin(admin.ModelAdmin):
     autocomplete_fields = ("user", "skill")
     date_hierarchy = "created_at"
     readonly_fields = ("created_at",)
+
+
+@admin.register(SkillEndorsement)
+class SkillEndorsementAdmin(admin.ModelAdmin):
+    list_display = ("id", "user_skill", "endorser", "comment", "created_at")
+    search_fields = ("user_skill__skill__name", "user_skill__user__username", "endorser__username", "comment")
+    list_filter = ("created_at",)
+    list_select_related = ("user_skill__skill", "user_skill__user", "endorser")
+    raw_id_fields = ("user_skill", "endorser")
