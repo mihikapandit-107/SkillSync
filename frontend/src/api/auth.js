@@ -50,3 +50,20 @@ export const authApi = {
     });
   },
 };
+
+export const savedPeersApi = {
+  async list() {
+    return await apiClient('/users/saved/', { method: 'GET' });
+  },
+  async save(peerId, note = '') {
+    return await apiClient('/users/saved/', {
+      method: 'POST',
+      body: { peer_id: peerId, note },
+    });
+  },
+  async remove(peerId) {
+    return await apiClient(`/users/saved/${peerId}/`, {
+      method: 'DELETE',
+    });
+  },
+};
