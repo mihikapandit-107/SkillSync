@@ -17,15 +17,19 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  ShieldAlert,
+  Check,
+  X,
 } from 'lucide-react';
 import { adminApi } from '../../api/admin';
 import { skillsApi } from '../../api/skills';
 import { reviewsApi } from '../../api/review';
+import { safetyApi } from '../../api/safety';
 import { useAuth } from '../../context/useAuth';
 
 export function AdminDashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' | 'moderation' | 'skills' | 'reviews'
+  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' | 'moderation' | 'skills' | 'reviews' | 'reports'
   const [overview, setOverview] = useState(null);
   const [popularSkills, setPopularSkills] = useState([]);
   const [skillGap, setSkillGap] = useState([]);
@@ -50,6 +54,13 @@ export function AdminDashboard() {
   const [reviewsList, setReviewsList] = useState([]);
   const [reviewTotalCount, setReviewTotalCount] = useState(0);
   const [reviewPage, setReviewPage] = useState(1);
+
+  // Moderation: Safety Reports
+  const [reportsList, setReportsList] = useState([]);
+  const [reportTotalCount, setReportTotalCount] = useState(0);
+  const [reportPage, setReportPage] = useState(1);
+  const [reportStatusFilter, setReportStatusFilter] = useState('');
+  const [reportNotes, setReportNotes] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -112,6 +123,16 @@ export function AdminDashboard() {
     }
   }, [reviewPage]);
 
+  const fetchReports = useCallback(async () => {
+    try {
+      const data = await safetyApi.getAdminReports({ status: reportStatusFilter, page: reportPage });
+      setReportsList(data?.results || []);
+      setReportTotalCount(data?.count || 0);
+    } catch (err) {
+      console.error('Failed to load safety reports:', err);
+    }
+  }, [reportStatusFilter, reportPage]);
+
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
@@ -123,8 +144,25 @@ export function AdminDashboard() {
       fetchSkills();
     } else if (activeTab === 'reviews') {
       fetchReviews();
+    } else if (activeTab === 'reports') {
+      fetchReports();
     }
-  }, [activeTab, fetchUsers, fetchSkills, fetchReviews]);
+  }, [activeTab, fetchUsers, fetchSkills, fetchReviews, fetchReports]);
+
+  const handleResolveReport = async (reportId, newStatus) => {
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await safetyApi.resolveReport(reportId, {
+        status: newStatus,
+        admin_note: reportNotes[reportId] || '',
+      });
+      setActionSuccess(`Report #${reportId} has been marked as ${newStatus}.`);
+      fetchReports();
+    } catch (err) {
+      setActionError(err.message || 'Failed to update report.');
+    }
+  };
 
   const handleToggleUserStatus = async (targetUser) => {
     setActionError(null);
@@ -222,6 +260,7 @@ export function AdminDashboard() {
               if (activeTab === 'moderation') fetchUsers();
               if (activeTab === 'skills') fetchSkills();
               if (activeTab === 'reviews') fetchReviews();
+              if (activeTab === 'reports') fetchReports();
             }}
             disabled={refreshing}
           >
@@ -361,6 +400,15 @@ export function AdminDashboard() {
         >
           <MessageSquare size={16} />
           Reviews Moderation
+        </button>
+        <button
+          type="button"
+          className={`btn ${activeTab === 'reports' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('reports')}
+          style={{ padding: '0.5rem 1.25rem' }}
+        >
+          <ShieldAlert size={16} />
+          Safety Reports {reportTotalCount > 0 ? `(${reportTotalCount})` : ''}
         </button>
       </div>
 
@@ -946,6 +994,130 @@ export function AdminDashboard() {
                 Next
                 <ChevronRight size={16} />
               </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 5: Safety Reports Moderation */}
+      {activeTab === 'reports' && (
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', color: '#f5edd8' }}>Student Safety & Abuse Reports</h2>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Review confidential complaints submitted by campus peers against spam, harassment, or no-shows.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <select
+                className="form-select"
+                value={reportStatusFilter}
+                onChange={(e) => {
+                  setReportStatusFilter(e.target.value);
+                  setReportPage(1);
+                }}
+                style={{ width: '160px', padding: '0.45rem 0.75rem', fontSize: '0.85rem' }}
+              >
+                <option value="">All Statuses</option>
+                <option value="open">Open Only</option>
+                <option value="resolved">Resolved</option>
+                <option value="dismissed">Dismissed</option>
+              </select>
+            </div>
+          </div>
+
+          {reportsList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+              <ShieldAlert size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.5 }} />
+              <p>No safety reports found matching criteria.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '0.75rem' }}>ID</th>
+                    <th style={{ padding: '0.75rem' }}>Reported Student</th>
+                    <th style={{ padding: '0.75rem' }}>Reason & Details</th>
+                    <th style={{ padding: '0.75rem' }}>Reporter</th>
+                    <th style={{ padding: '0.75rem' }}>Status</th>
+                    <th style={{ padding: '0.75rem' }}>Moderator Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportsList.map((r) => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '0.75rem', fontWeight: 600 }}>#{r.id}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <div style={{ fontWeight: 600, color: '#f5edd8' }}>@{r.reported_user_detail?.username}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {r.reported_user_detail?.college || 'Student'} • Total reports: {r.reports_against_user}
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.75rem', maxWidth: '320px' }}>
+                        <span className="badge badge-advanced" style={{ marginBottom: '0.35rem', display: 'inline-block' }}>
+                          {r.reason_label}
+                        </span>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.825rem', whiteSpace: 'pre-wrap' }}>
+                          {r.details || 'No additional details provided.'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <div style={{ color: 'var(--text-secondary)' }}>@{r.reporter_detail?.username}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {new Date(r.created_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <span className={`badge ${
+                          r.status === 'open' ? 'badge-beginner' : (r.status === 'resolved' ? 'badge-offer' : 'badge-intermediate')
+                        }`}>
+                          {r.status_label}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem' }}>
+                        {r.status === 'open' ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="Optional moderator note..."
+                              style={{ fontSize: '0.8rem', padding: '0.35rem 0.5rem' }}
+                              value={reportNotes[r.id] || ''}
+                              onChange={(e) => setReportNotes({ ...reportNotes, [r.id]: e.target.value })}
+                            />
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                                onClick={() => handleResolveReport(r.id, 'resolved')}
+                              >
+                                <Check size={12} /> Resolve
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                                onClick={() => handleResolveReport(r.id, 'dismissed')}
+                              >
+                                <X size={12} /> Dismiss
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            Closed by @{r.resolved_by_username || 'staff'}
+                            {r.admin_note && <div style={{ fontStyle: 'italic', marginTop: '2px' }}>"{r.admin_note}"</div>}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

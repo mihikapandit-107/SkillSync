@@ -16,6 +16,7 @@ from django.apps import apps
 from django.core.exceptions import FieldError
 from django.db.models import Avg, Q
 
+from apps.safety.services import exclude_blocked
 from apps.skills.models import UserSkill
 
 MUTUAL_BONUS = 100
@@ -83,17 +84,17 @@ def get_matches_for(user, mutual_only=False, same_college=False, skill_id=None):
         return []
 
     # Only rows that can contribute to a match: their offers in my wants,
-    # their wants in my offers.
-    candidate_rows = (
+    # their wants in my offers. Students blocked either way are left out.
+    candidate_rows = exclude_blocked(
         UserSkill.objects
         .filter(user__is_active=True)
         .exclude(user=user)
         .filter(
             Q(skill_type=UserSkill.SkillType.OFFER, skill_id__in=wanted)
             | Q(skill_type=UserSkill.SkillType.WANT, skill_id__in=offered)
-        )
-        .select_related("user", "skill")
-    )
+        ),
+        user,
+    ).select_related("user", "skill")
 
     users = {}
     teach_me = defaultdict(dict)    # user_id -> {skill_id: Skill}

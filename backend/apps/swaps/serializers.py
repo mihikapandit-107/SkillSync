@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from apps.safety.services import is_blocked_between
 from apps.skills.models import Skill, UserSkill
 from apps.skills.serializers import SkillSerializer
 from apps.users.serializers import PublicUserSerializer
@@ -46,6 +47,11 @@ class SwapRequestSerializer(serializers.ModelSerializer):
         if receiver == user:
             raise serializers.ValidationError(
                 {"receiver": "You cannot send a swap request to yourself."}
+            )
+
+        if is_blocked_between(user.pk, receiver.pk):
+            raise serializers.ValidationError(
+                {"receiver": "You can't send a swap request to this student."}
             )
 
         if not UserSkill.objects.filter(

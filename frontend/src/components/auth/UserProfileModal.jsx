@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { School, Star, MessageSquare, Sparkles, BookOpen } from 'lucide-react';
+import { School, Star, MessageSquare, Sparkles, BookOpen, ShieldAlert, UserX } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { authApi } from '../../api/auth';
+import { safetyApi } from '../../api/safety';
+import { ReportModal } from '../safety/ReportModal';
 
 // Skills may arrive as objects ({ id, name }) or plain strings (demo data).
 const skillName = (s) => (typeof s === 'string' ? s : s?.name);
@@ -34,6 +36,25 @@ function SkillChips({ skills, className, emptyText }) {
 export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConnect }) {
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+
+  const handleBlock = async () => {
+    if (!current?.id) return;
+    if (!window.confirm(`Block @${current?.username}? You won't see each other in matches or be able to swap skills.`)) {
+      return;
+    }
+    setBlocking(true);
+    try {
+      await safetyApi.blockUser(current.id);
+      alert(`@${current.username} has been blocked.`);
+      onClose();
+    } catch (err) {
+      alert(err.message || 'Could not block user.');
+    } finally {
+      setBlocking(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !userId) return;
@@ -76,27 +97,63 @@ export function UserProfileModal({ isOpen, onClose, userId, fallbackUser, onConn
       onClose={onClose}
       title="Student Public Profile"
       footer={
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
-          <button type="button" className="btn btn-outline btn-sm" onClick={onClose}>
-            Close
-          </button>
-          {onConnect && (
-            <button
-              type="button"
-              className="btn btn-connect btn-sm"
-              style={{ backgroundColor: '#cca969', color: '#131a24', border: '1px solid #cca969', fontWeight: 700 }}
-              onClick={() => {
-                onClose();
-                onConnect(current);
-              }}
-            >
-              <MessageSquare size={14} />
-              Request Swap / Connect
-            </button>
-          )}
-        </div>
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                style={{ color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                onClick={() => setIsReportOpen(true)}
+                title="Report user to moderators"
+              >
+                <ShieldAlert size={14} />
+                Report
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                style={{ color: 'var(--text-muted)' }}
+                onClick={handleBlock}
+                disabled={blocking}
+                title="Block user from matching & swapping"
+              >
+                <UserX size={14} />
+                {blocking ? 'Blocking...' : 'Block'}
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button type="button" className="btn btn-outline btn-sm" onClick={onClose}>
+                Close
+              </button>
+              {onConnect && (
+                <button
+                  type="button"
+                  className="btn btn-connect btn-sm"
+                  style={{ backgroundColor: '#cca969', color: '#131a24', border: '1px solid #cca969', fontWeight: 700 }}
+                  onClick={() => {
+                    onClose();
+                    onConnect(current);
+                  }}
+                >
+                  <MessageSquare size={14} />
+                  Request Swap / Connect
+                </button>
+              )}
+            </div>
+          </div>
+        </>
       }
     >
+      <ReportModal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        targetUser={current}
+        onSuccess={() => {
+          alert('Report submitted successfully.');
+        }}
+      />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Header: avatar + name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
