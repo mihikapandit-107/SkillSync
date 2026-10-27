@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, tokenStorage } from './client';
 
 // Wrapper around /api/sessions/ endpoints.
 export const sessionsApi = {
@@ -29,5 +29,27 @@ export const sessionsApi = {
   // Only allowed once the session start time has passed.
   async complete(id) {
     return await apiClient(`/sessions/${id}/complete/`, { method: 'POST' });
+  },
+
+  // Download iCalendar (.ics) invite for calendar apps (Google Calendar, Outlook, Apple Calendar)
+  async downloadCalendarIcs(id) {
+    const token = tokenStorage.getAccess();
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    const res = await fetch(`/api/sessions/${id}/calendar/`, { headers });
+    if (!res.ok) {
+      throw new Error('Failed to download calendar event');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `skillsync-session-${id}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
   },
 };
