@@ -1,6 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Compass, School, User, MessageSquare, X, SearchX, RotateCcw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  Compass,
+  School,
+  User,
+  MessageSquare,
+  X,
+  SearchX,
+  RotateCcw,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Bookmark,
+  BookmarkCheck,
+} from 'lucide-react';
 import { skillsApi } from '../../api/skills';
+import { savedPeersApi } from '../../api/auth';
 import { formatApiError } from '../../api/client';
 import { LevelBadge, CategoryBadge } from '../common/Badge';
 import { UserProfileModal } from '../auth/UserProfileModal';
@@ -105,6 +120,57 @@ export function DiscoverView({ onRequireLogin }) {
   const [loadError, setLoadError] = useState(null);
   const [viewingPeer, setViewingPeer] = useState(null); // Discover item shown in the profile modal
   const [swapTargetPeer, setSwapTargetPeer] = useState(null);
+  const [savedPeerIds, setSavedPeerIds] = useState(new Set());
+  const [filterSavedOnly, setFilterSavedOnly] = useState(false);
+  const [bookmarkingId, setBookmarkingId] = useState(null);
+
+  const fetchSavedPeers = useCallback(async () => {
+    if (!isAuthenticated || isDemoMode) return;
+    try {
+      const res = await savedPeersApi.list();
+      const list = Array.isArray(res) ? res : (res?.results || []);
+      const ids = new Set(list.map((item) => item.peer_detail?.id || item.peer_id || item.peer));
+      setSavedPeerIds(ids);
+    } catch {
+      // Non-blocking
+    }
+  }, [isAuthenticated, isDemoMode]);
+
+  useEffect(() => {
+    fetchSavedPeers();
+  }, [fetchSavedPeers]);
+
+  const handleToggleBookmark = async (peerUser) => {
+    if (!peerUser?.id) return;
+    const isCurrentlySaved = savedPeerIds.has(peerUser.id);
+    setBookmarkingId(peerUser.id);
+    try {
+      if (isDemoMode) {
+        setSavedPeerIds((prev) => {
+          const next = new Set(prev);
+          if (isCurrentlySaved) next.delete(peerUser.id);
+          else next.add(peerUser.id);
+          return next;
+        });
+      } else {
+        if (isCurrentlySaved) {
+          await savedPeersApi.remove(peerUser.id);
+          setSavedPeerIds((prev) => {
+            const next = new Set(prev);
+            next.delete(peerUser.id);
+            return next;
+          });
+        } else {
+          await savedPeersApi.save(peerUser.id);
+          setSavedPeerIds((prev) => new Set([...prev, peerUser.id]));
+        }
+      }
+    } catch (err) {
+      alert(formatApiError(err));
+    } finally {
+      setBookmarkingId(null);
+    }
+  };
 
   const fetchPeers = useCallback(async () => {
     if (!isAuthenticated) {
@@ -171,15 +237,19 @@ export function DiscoverView({ onRequireLogin }) {
   }, [fetchPeers]);
 
   const filteredPeers = useMemo(() => {
+    if (filterSavedOnly) {
+      return allPeers.filter((item) => savedPeerIds.has(item.user?.id));
+    }
     return allPeers;
-  }, [allPeers]);
+  }, [allPeers, filterSavedOnly, savedPeerIds]);
 
-  const hasActiveFilters = searchQuery || selectedCategory !== 'All' || selectedLevel !== 'All';
+  const hasActiveFilters = searchQuery || selectedCategory !== 'All' || selectedLevel !== 'All' || filterSavedOnly;
 
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('All');
     setSelectedLevel('All');
+    setFilterSavedOnly(false);
     setPage(1);
   };
 
@@ -331,6 +401,24 @@ export function DiscoverView({ onRequireLogin }) {
               <option value="advanced" style={{ backgroundColor: '#182434', color: '#f5f0e6' }}>Advanced</option>
             </select>
 
+            <button
+              type="button"
+              className={`btn btn-sm ${filterSavedOnly ? 'btn-primary' : 'btn-outline'}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                backgroundColor: filterSavedOnly ? '#cca969' : 'rgba(20, 29, 41, 0.65)',
+                color: filterSavedOnly ? '#121822' : '#cbd5e1',
+                border: filterSavedOnly ? '1px solid #cca969' : '1px solid rgba(204, 169, 105, 0.35)',
+                fontWeight: 600,
+              }}
+              onClick={() => setFilterSavedOnly(!filterSavedOnly)}
+            >
+              {filterSavedOnly ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+              Saved Peers ({savedPeerIds.size})
+            </button>
+
             {hasActiveFilters && (
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleResetFilters}>
                 <X size={15} color="#cca969" />
@@ -442,48 +530,75 @@ export function DiscoverView({ onRequireLogin }) {
                 >
                   <div>
                     {/* Student header */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}>
-                      {item.user?.avatar_url ? (
-                        <img
-                          src={item.user.avatar_url}
-                          alt={studentName}
-                          style={{ width: '46px', height: '46px', borderRadius: 'var(--radius-full)', objectFit: 'cover', border: '2px solid #cca969', cursor: 'pointer' }}
-                          onClick={() => setViewingPeer(item)}
-                          title="View full profile"
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: '46px',
-                            height: '46px',
-                            borderRadius: 'var(--radius-full)',
-                            backgroundColor: 'rgba(204, 169, 105, 0.15)',
-                            color: '#cca969',
-                            border: '2px solid #cca969',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 700,
-                            fontSize: '1.15rem',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => setViewingPeer(item)}
-                          title="View full profile"
-                        >
-                          {initial}
-                        </div>
-                      )}
-                      <div style={{ overflow: 'hidden' }}>
-                        <div style={{ fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', color: '#f5f0e6' }} onClick={() => setViewingPeer(item)}>
-                          {studentName}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#9eb1c5', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <School size={13} color="#cca969" />
-                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {item.user?.college || 'University Student'}
-                          </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.85rem', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', overflow: 'hidden' }}>
+                        {item.user?.avatar_url ? (
+                          <img
+                            src={item.user.avatar_url}
+                            alt={studentName}
+                            style={{ width: '46px', height: '46px', borderRadius: 'var(--radius-full)', objectFit: 'cover', border: '2px solid #cca969', cursor: 'pointer', flexShrink: 0 }}
+                            onClick={() => setViewingPeer(item)}
+                            title="View full profile"
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: 'var(--radius-full)',
+                              backgroundColor: 'rgba(204, 169, 105, 0.15)',
+                              color: '#cca969',
+                              border: '2px solid #cca969',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '1.15rem',
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                            }}
+                            onClick={() => setViewingPeer(item)}
+                            title="View full profile"
+                          >
+                            {initial}
+                          </div>
+                        )}
+                        <div style={{ overflow: 'hidden' }}>
+                          <div style={{ fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', color: '#f5f0e6' }} onClick={() => setViewingPeer(item)}>
+                            {studentName}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: '#9eb1c5', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <School size={13} color="#cca969" />
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {item.user?.college || 'University Student'}
+                            </span>
+                          </div>
                         </div>
                       </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-icon btn-sm"
+                        style={{
+                          backgroundColor: savedPeerIds.has(item.user?.id) ? 'rgba(204, 169, 105, 0.22)' : 'transparent',
+                          color: savedPeerIds.has(item.user?.id) ? '#cca969' : '#6f8297',
+                          border: savedPeerIds.has(item.user?.id) ? '1px solid #cca969' : '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: 'var(--radius-full)',
+                          padding: '7px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                        title={savedPeerIds.has(item.user?.id) ? 'Remove bookmark' : 'Bookmark peer'}
+                        disabled={bookmarkingId === item.user?.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleBookmark(item.user);
+                        }}
+                      >
+                        {savedPeerIds.has(item.user?.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                      </button>
                     </div>
 
                     {/* Skill */}
