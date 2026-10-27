@@ -74,4 +74,18 @@ export const skillsApi = {
     const endpoint = `/discover/${queryString ? `?${queryString}` : ''}`;
     return await apiClient(endpoint, { method: 'GET' });
   },
+
+  // Peer Skill Endorsements
+  async toggleEndorsement(userSkillId, comment = '') {
+    return await apiClient(`/skills/user-skills/${userSkillId}/endorse/`, {
+      method: 'POST',
+      body: { comment },
+    });
+  },
+
+  async getEndorsements(userSkillId) {
+    return await apiClient(`/skills/user-skills/${userSkillId}/endorsements/`, {
+      method: 'GET',
+    });
+  },
 };
