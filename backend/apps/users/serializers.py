@@ -181,11 +181,11 @@ class SavedPeerSerializer(serializers.ModelSerializer):
         fields = ("id", "peer_id", "peer_detail", "note", "created_at")
         read_only_fields = ("id", "created_at")
 
-    def validate_peer(self, peer):
+    def validate(self, attrs):
         request = self.context.get("request")
-        if request and request.user == peer:
-            raise serializers.ValidationError("You cannot bookmark your own profile.")
-        return peer
+        if request and request.user == attrs.get("peer"):
+            raise serializers.ValidationError({"peer_id": "You cannot bookmark your own profile."})
+        return attrs
 
     def create(self, validated_data):
         user = self.context["request"].user
