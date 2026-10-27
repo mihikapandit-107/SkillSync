@@ -149,3 +149,27 @@ class SessionTests(APITestCase):
         self.assertEqual(
             Notification.objects.filter(recipient=self.alice, notification_type="session_cancelled").count(), 1
         )
+
+    def test_calendar_export_ics(self):
+        sid = self.create().data["id"]
+        # Alice (requester) can download
+        self.client.force_authenticate(self.alice)
+        res = self.client.get(f"/api/sessions/{sid}/calendar/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res["Content-Type"], "text/calendar; charset=utf-8")
+        self.assertIn("skillsync-session-", res["Content-Disposition"])
+        content = res.content.decode("utf-8")
+        self.assertIn("BEGIN:VCALENDAR", content)
+        self.assertIn("BEGIN:VEVENT", content)
+        self.assertIn("SUMMARY:SkillSync: Python & Guitar", content)
+        self.assertIn("END:VCALENDAR", content)
+
+        # Bob (receiver) can also download
+        self.client.force_authenticate(self.bob)
+        res_bob = self.client.get(f"/api/sessions/{sid}/calendar/")
+        self.assertEqual(res_bob.status_code, 200)
+
+        # Carol (outsider) gets 404
+        self.client.force_authenticate(self.carol)
+        res_carol = self.client.get(f"/api/sessions/{sid}/calendar/")
+        self.assertEqual(res_carol.status_code, 404)
