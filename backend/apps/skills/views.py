@@ -1,7 +1,15 @@
-from rest_framework import filters, generics
+from django.shortcuts import get_object_or_404
+from rest_framework import filters, generics, permissions, status
 from rest_framework.exceptions import ValidationError
-from .models import Skill, UserSkill
-from .serializers import DiscoverSerializer, SkillSerializer, UserSkillSerializer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import Skill, UserSkill, SkillEndorsement
+from .serializers import (
+    DiscoverSerializer,
+    SkillSerializer,
+    UserSkillSerializer,
+    SkillEndorsementSerializer,
+)
 
 
 class SkillListCreateView(generics.ListCreateAPIView):
@@ -90,3 +98,46 @@ class DiscoverView(generics.ListAPIView):
         if level:
             qs = qs.filter(level=level)
         return qs
+
+
+class UserSkillEndorseToggleView(APIView):
+    """POST /api/skills/user-skills/<int:pk>/endorse/ - Toggle peer endorsement."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        user_skill = get_object_or_404(UserSkill, pk=pk)
+        if user_skill.user == request.user:
+            return Response(
+                {"detail": "You cannot endorse your own listed skill."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        comment = request.data.get("comment", "").strip()
+        existing = SkillEndorsement.objects.filter(user_skill=user_skill, endorser=request.user).first()
+        if existing:
+            existing.delete()
+            endorsed = False
+        else:
+            SkillEndorsement.objects.create(
+                user_skill=user_skill,
+                endorser=request.user,
+                comment=comment,
+            )
+            endorsed = True
+
+        count = user_skill.endorsements.count()
+        return Response({
+            "endorsed": endorsed,
+            "endorsements_count": count,
+            "user_skill_id": user_skill.id,
+        })
+
+
+class UserSkillEndorsementListView(generics.ListAPIView):
+    """GET /api/skills/user-skills/<int:pk>/endorsements/ - List endorsements for a skill."""
+    serializer_class = SkillEndorsementSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user_skill = get_object_or_404(UserSkill, pk=self.kwargs["pk"])
+        return user_skill.endorsements.select_related("endorser")
