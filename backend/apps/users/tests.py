@@ -129,3 +129,38 @@ class UserAuthVerificationTests(APITestCase):
         response = self.client.post(url, payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("detail", response.data)
+
+
+class SavedPeerTests(APITestCase):
+    def setUp(self):
+        self.alice = User.objects.create_user("alice_save", "alice_save@campus.edu", "pass12345!")
+        self.bob = User.objects.create_user("bob_save", "bob_save@campus.edu", "pass12345!")
+
+    def test_bookmark_and_list_saved_peers(self):
+        self.client.force_authenticate(self.alice)
+        res = self.client.post("/api/users/saved/", {"peer_id": self.bob.id, "note": "Great at algorithms"})
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data["peer_detail"]["username"], "bob_save")
+        self.assertEqual(res.data["note"], "Great at algorithms")
+
+        # List saved peers
+        list_res = self.client.get("/api/users/saved/")
+        self.assertEqual(list_res.status_code, status.HTTP_200_OK)
+        results = list_res.data.get("results", list_res.data)
+        self.assertEqual(len(results), 1)
+
+    def test_cannot_bookmark_self(self):
+        self.client.force_authenticate(self.alice)
+        res = self.client.post("/api/users/saved/", {"peer_id": self.alice.id})
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unbookmark_peer(self):
+        self.client.force_authenticate(self.alice)
+        self.client.post("/api/users/saved/", {"peer_id": self.bob.id})
+        del_res = self.client.delete(f"/api/users/saved/{self.bob.id}/")
+        self.assertEqual(del_res.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Confirm list is empty
+        list_res = self.client.get("/api/users/saved/")
+        results = list_res.data.get("results", list_res.data)
+        self.assertEqual(len(results), 0)
