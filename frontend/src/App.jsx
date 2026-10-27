@@ -16,6 +16,7 @@ import { SwapsView } from './components/swaps/SwapsView';
 import { SessionsView } from './components/sessions/SessionsView';
 import { MatchesView } from './components/matching/MatchesView';
 import { LeaderboardView } from './components/achievements/LeaderboardView';
+import { ChatDrawer } from './components/chat/ChatDrawer';
 
 // Tabs that need a logged-in user.
 const LOGIN_ONLY_TABS = ['myskills', 'matches', 'swaps', 'sessions', 'profile', 'admin'];
@@ -26,6 +27,7 @@ function MainLayout() {
   const [requestedTab, setActiveTab] = useState('discover');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Quick bridge from Catalog to AddUserSkill
   const [selectedCatalogSkill, setSelectedCatalogSkill] = useState(null);
@@ -69,6 +71,7 @@ function MainLayout() {
         onOpenLogin={() => setIsLoginOpen(true)}
         onOpenRegister={() => setIsRegisterOpen(true)}
         onOpenProfile={() => setActiveTab('profile')}
+        onOpenChat={() => setIsChatOpen(true)}
       />
 
       <main style={{ flex: 1, padding: '2rem 0 4.5rem 0' }}>
@@ -142,6 +145,12 @@ function MainLayout() {
         onSuccess={handleUserSkillAdded}
         initialSkill={selectedCatalogSkill}
         initialType={selectedSkillType}
+      />
+
+      {/* Floating Peer Direct Messages Drawer */}
+      <ChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
       />
     </div>
   );
