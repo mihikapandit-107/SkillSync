@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, BookOpen, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
+import { Plus, Edit2, Trash2, BookOpen, CheckCircle, AlertCircle, RotateCcw, ThumbsUp } from 'lucide-react';
 import { skillsApi } from '../../api/skills';
 import { LevelBadge, SkillTypeBadge } from '../common/Badge';
 import { AddUserSkillModal } from './AddUserSkillModal';
@@ -251,8 +251,25 @@ export function MySkillsView() {
                   <LevelBadge level={userSkill.level} />
                 </div>
 
-                <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                   <SkillTypeBadge type={userSkill.skill_type} />
+                  {Boolean(userSkill.endorsements_count && userSkill.endorsements_count > 0) && (
+                    <span
+                      className="badge"
+                      style={{
+                        backgroundColor: 'rgba(204, 169, 105, 0.15)',
+                        color: '#cca969',
+                        border: '1px solid rgba(204, 169, 105, 0.4)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      <ThumbsUp size={11} fill="#cca969" />
+                      {userSkill.endorsements_count} {userSkill.endorsements_count === 1 ? 'Endorsement' : 'Endorsements'}
+                    </span>
+                  )}
                 </div>
 
                 <p style={{
