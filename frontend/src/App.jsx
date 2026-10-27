@@ -15,13 +15,14 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { SwapsView } from './components/swaps/SwapsView';
 import { SessionsView } from './components/sessions/SessionsView';
 import { MatchesView } from './components/matching/MatchesView';
+import { LeaderboardView } from './components/achievements/LeaderboardView';
 
 // Tabs that need a logged-in user.
 const LOGIN_ONLY_TABS = ['myskills', 'matches', 'swaps', 'sessions', 'profile', 'admin'];
 
 function MainLayout() {
   const { user, isAuthenticated } = useAuth();
-  // 'discover' | 'matches' | 'catalog' | 'myskills' | 'swaps' | 'sessions' | 'profile' | 'admin'
+  // 'discover' | 'matches' | 'catalog' | 'myskills' | 'swaps' | 'sessions' | 'leaderboard' | 'profile' | 'admin'
   const [requestedTab, setActiveTab] = useState('discover');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -91,6 +92,7 @@ function MainLayout() {
 
           {activeTab === 'swaps' && <SwapsView onOpenSessions={() => setActiveTab('sessions')} />}
           {activeTab === 'sessions' && <SessionsView />}
+          {activeTab === 'leaderboard' && <LeaderboardView />}
           {activeTab === 'profile' && <ProfileView />}
           {activeTab === 'admin' && <AdminDashboard />}
         </div>

@@ -1,4 +1,4 @@
-import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus, Shield, ArrowLeftRight, CalendarDays, Sparkles } from 'lucide-react';
+import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus, Shield, ArrowLeftRight, CalendarDays, Sparkles, Trophy } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { NotificationsDropdown } from '../notifications/NotificationsDropdown';
 
@@ -13,6 +13,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
     { id: 'myskills', label: 'My Skills', icon: BookOpen, show: isAuthenticated },
     { id: 'swaps', label: 'Swaps', icon: ArrowLeftRight, show: isAuthenticated },
     { id: 'sessions', label: 'Sessions', icon: CalendarDays, show: isAuthenticated },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, show: true },
     { id: 'admin', label: 'Admin', icon: Shield, show: isAuthenticated && isStaff },
   ].filter((t) => t.show);
 
