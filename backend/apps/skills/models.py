@@ -43,3 +43,26 @@ class UserSkill(models.Model):
 
     def __str__(self):
         return f"{self.user} {self.skill_type} {self.skill}"
+
+
+class SkillEndorsement(models.Model):
+    """Peer student endorsement for a student's offered or wanted skill."""
+    user_skill = models.ForeignKey(
+        UserSkill, on_delete=models.CASCADE, related_name="endorsements"
+    )
+    endorser = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="given_endorsements"
+    )
+    comment = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user_skill", "endorser"], name="unique_user_skill_endorsement"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.endorser.username} endorsed {self.user_skill.skill.name}"
