@@ -1,8 +1,8 @@
-import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus, Shield, ArrowLeftRight, CalendarDays, Sparkles, Trophy } from 'lucide-react';
+import { GraduationCap, Compass, BookOpen, Layers, LogOut, LogIn, UserPlus, Shield, ArrowLeftRight, CalendarDays, Sparkles, Trophy, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { NotificationsDropdown } from '../notifications/NotificationsDropdown';
 
-export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, onOpenProfile }) {
+export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, onOpenProfile, onOpenChat }) {
   const { user, isAuthenticated, logout, enableDemoMode, isDemoMode } = useAuth();
 
   const isStaff = !!(user?.is_staff || user?.is_superuser);
@@ -108,10 +108,34 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, onOpenRegister, o
           {isAuthenticated ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               {isDemoMode && (
-                <span className="badge" style={{ backgroundColor: 'rgba(204, 169, 105, 0.15)', color: '#eeddbb', border: '1px solid rgba(204, 169, 105, 0.4)' }}>
-                  Demo Mode
-                </span>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={logout}
+                  title="Click to exit Demo Mode"
+                  style={{
+                    backgroundColor: 'rgba(204, 169, 105, 0.15)',
+                    color: '#eeddbb',
+                    border: '1px solid rgba(204, 169, 105, 0.4)',
+                    fontSize: '0.75rem',
+                    padding: '0.25rem 0.6rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Demo Mode (Exit)
+                </button>
               )}
+
+              <button
+                type="button"
+                className="btn-icon"
+                onClick={onOpenChat}
+                title="Direct Messages"
+                aria-label="Direct Messages"
+                style={{ color: '#cca969' }}
+              >
+                <MessageSquare size={18} />
+              </button>
 
               <NotificationsDropdown onNavigate={setActiveTab} />
 
