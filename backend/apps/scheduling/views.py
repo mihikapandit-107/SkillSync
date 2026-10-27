@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -88,3 +89,45 @@ class SessionCompleteView(SessionActionView):
             raise ValidationError({"detail": "A session can only be completed after it has started."})
         session.status = Session.Status.COMPLETED
         session.save(update_fields=["status", "updated_at"])
+
+
+class SessionIcsExportView(APIView):
+    """GET /api/sessions/<pk>/calendar/ -> Download RFC 5545 iCalendar (.ics) event."""
+
+    def get(self, request, pk):
+        session = get_object_or_404(my_sessions(request.user), pk=pk)
+        swap = session.swap
+        partner = swap.receiver if swap.requester_id == request.user.id else swap.requester
+        partner_name = partner.first_name or partner.username
+
+        fmt = "%Y%m%dT%H%M%SZ"
+        start_utc = session.scheduled_at.strftime(fmt)
+        end_utc = session.end_at.strftime(fmt)
+        now_utc = timezone.now().strftime(fmt)
+
+        summary = f"SkillSync: {swap.offered_skill.name} & {swap.wanted_skill.name} with {partner_name}"
+        desc = (session.notes or f"Learning exchange session with {partner_name}").replace("\n", " ")
+        location = session.location_or_link or "Online"
+
+        ics_content = (
+            "BEGIN:VCALENDAR\r\n"
+            "VERSION:2.0\r\n"
+            "PRODID:-//SkillSync//Campus Peer Learning//EN\r\n"
+            "CALSCALE:GREGORIAN\r\n"
+            "METHOD:PUBLISH\r\n"
+            "BEGIN:VEVENT\r\n"
+            f"UID:skillsync-session-{session.pk}@skillsync.campus\r\n"
+            f"DTSTAMP:{now_utc}\r\n"
+            f"DTSTART:{start_utc}\r\n"
+            f"DTEND:{end_utc}\r\n"
+            f"SUMMARY:{summary}\r\n"
+            f"DESCRIPTION:{desc}\r\n"
+            f"LOCATION:{location}\r\n"
+            "STATUS:CONFIRMED\r\n"
+            "END:VEVENT\r\n"
+            "END:VCALENDAR\r\n"
+        )
+
+        response = HttpResponse(ics_content, content_type="text/calendar; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="skillsync-session-{session.pk}.ics"'
+        return response
