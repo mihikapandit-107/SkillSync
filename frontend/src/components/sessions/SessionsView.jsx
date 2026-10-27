@@ -11,6 +11,7 @@ import {
   Check,
   CalendarClock,
   Star,
+  Download,
 } from 'lucide-react';
 import { sessionsApi } from '../../api/sessions';
 import { reviewsApi } from '../../api/review';
@@ -103,6 +104,15 @@ export function SessionsView() {
       setFeedback({ type: 'error', text: formatApiError(err) });
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const handleDownloadCalendar = async (session) => {
+    try {
+      await sessionsApi.downloadCalendarIcs(session.id);
+      setFeedback({ type: 'success', text: `Calendar event downloaded for session with ${displayName(session.swap_detail?.receiver_detail)}!` });
+    } catch (err) {
+      setFeedback({ type: 'error', text: formatApiError(err) });
     }
   };
 
@@ -313,6 +323,15 @@ export function SessionsView() {
                 {/* Scheduled Actions */}
                 {session.status === 'scheduled' && (
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', flexWrap: 'wrap', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      title="Download iCalendar event (.ics) to import into Google Calendar or Apple Calendar"
+                      onClick={() => handleDownloadCalendar(session)}
+                    >
+                      <Download size={13} />
+                      Export .ics
+                    </button>
                     <button type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={() => handleAction(session, 'cancel')}>
                       <Ban size={13} />
                       Cancel
