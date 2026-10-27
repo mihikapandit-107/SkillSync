@@ -75,3 +75,60 @@ class DiscoverApiTests(APITestCase):
         self.assertEqual(response.data["avatar_url"], "https://example.com/bob.jpg")
         self.assertIn("offered_skills", response.data)
         self.assertEqual(len(response.data["offered_skills"]), 1)
+
+
+class SkillEndorsementTests(APITestCase):
+    def setUp(self):
+        self.alice = User.objects.create_user("alice_end", "alice_end@campus.edu", "pass12345!")
+        self.bob = User.objects.create_user("bob_end", "bob_end@campus.edu", "pass12345!")
+        self.skill = Skill.objects.create(name="React & Node", category="Programming")
+        self.user_skill = UserSkill.objects.create(
+            user=self.bob,
+            skill=self.skill,
+            skill_type=UserSkill.SkillType.OFFER,
+            level=UserSkill.Level.ADVANCED,
+            description="Built several fullstack apps",
+        )
+
+    def test_peer_can_endorse_and_toggle(self):
+        self.client.force_authenticate(self.alice)
+        # 1. Endorse
+        url = f"/api/skills/user-skills/{self.user_skill.id}/endorse/"
+        res = self.client.post(url, {"comment": "Outstanding frontend developer!"})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data["endorsed"])
+        self.assertEqual(res.data["endorsements_count"], 1)
+
+        # 2. Check discover endpoint reflections
+        disc = self.client.get("/api/discover/?type=offer")
+        self.assertEqual(disc.status_code, status.HTTP_200_OK)
+        results = disc.data.get("results", disc.data)
+        matched = next(r for r in results if r["id"] == self.user_skill.id)
+        self.assertEqual(matched["endorsements_count"], 1)
+        self.assertTrue(matched["is_endorsed"])
+
+        # 3. Toggle off (unendorse)
+        un_res = self.client.post(url)
+        self.assertEqual(un_res.status_code, status.HTTP_200_OK)
+        self.assertFalse(un_res.data["endorsed"])
+        self.assertEqual(un_res.data["endorsements_count"], 0)
+
+    def test_cannot_endorse_own_skill(self):
+        self.client.force_authenticate(self.bob)
+        url = f"/api/skills/user-skills/{self.user_skill.id}/endorse/"
+        res = self.client.post(url)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("cannot endorse your own", res.data["detail"].lower())
+
+    def test_list_endorsements(self):
+        self.client.force_authenticate(self.alice)
+        endorse_url = f"/api/skills/user-skills/{self.user_skill.id}/endorse/"
+        self.client.post(endorse_url, {"comment": "Super patient tutor!"})
+
+        list_url = f"/api/skills/user-skills/{self.user_skill.id}/endorsements/"
+        res = self.client.get(list_url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        results = res.data.get("results", res.data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["endorser_username"], "alice_end")
+        self.assertEqual(results[0]["comment"], "Super patient tutor!")
