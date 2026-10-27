@@ -1,6 +1,6 @@
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from .models import User
+from .models import User, SavedPeer
 
 
 @admin.register(User)
@@ -33,3 +33,11 @@ class CustomUserAdmin(UserAdmin):
     def activate_users(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(request, f"Activated {updated} user(s).", messages.SUCCESS)
+
+
+@admin.register(SavedPeer)
+class SavedPeerAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "peer", "note", "created_at")
+    search_fields = ("user__username", "peer__username", "note")
+    list_filter = ("created_at",)
+    raw_id_fields = ("user", "peer")
