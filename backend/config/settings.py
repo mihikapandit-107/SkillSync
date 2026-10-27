@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.safety',
     'apps.availability',
     'apps.achievements',
+    'apps.chat',
 ]
 
 MIDDLEWARE = [
